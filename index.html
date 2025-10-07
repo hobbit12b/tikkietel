@@ -148,7 +148,7 @@
         <label>Bekijk log</label>
         <div>
           <button id="previewBtn" type="button" style="padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background: rgba(0,0,0,.06); font-weight:900; cursor:pointer">Open</button>
-          <div style="font-size:12px; opacity:.8; margin-top:6px">Log toont alleen fouten, velden level en “wist niet”</div>
+          <div style="font-size:12px; opacity:.8; margin-top:6px">Log toont fouten met datum, tijd en details</div>
         </div>
       </div>
 
@@ -187,7 +187,7 @@
   const SETTINGS_KEY = 'kleuter_cijferpop_settings'
   const LOG_KEY = 'kleuter_cijferpop_log'
 
-  // ---------- NIEUW: veilige opslag met fallback ----------
+  // Veilige opslag met fallback
   const safeStore = (() => {
     let memory = {}
     let ok = true
@@ -212,7 +212,6 @@
       }
     }
   })()
-  // -------------------------------------------------------
 
   const state = {
     moving: false,
@@ -224,13 +223,9 @@
     jerkMeta: new Map(),
     runningRAF: 0,
     lastTime: 0,
-
-    // ---------- TTS ----------
     voice: null,
     voicePrimed: false,
     voicesLoaded: false,
-    // -------------------------
-
     minSpeed: 10,
     maxSpeed: 22,
     minSize: 110,
@@ -262,7 +257,7 @@
     showToast._t = setTimeout(() => toast.classList.remove('show'), 1100)
   }
 
-  // ---------- TTS: robuuste initialisatie voor iPad ----------
+  // TTS robuust voor iPad
   function loadVoices(){
     return new Promise(resolve => {
       const got = speechSynthesis.getVoices()
@@ -273,7 +268,6 @@
           resolve(speechSynthesis.getVoices())
         }
         speechSynthesis.onvoiceschanged = onv
-        // fallback timer als onvoiceschanged niet triggert
         setTimeout(onv, 1200)
       }
     })
@@ -287,10 +281,8 @@
   function word(n){ return NUM_WORDS_NL[n] || String(n) }
 
   async function ensureTTSReady(){
-    // eenmaal per sessie, binnen een gebruikersactie
     if(state.voicePrimed && state.voicesLoaded) return
     try{
-      // klein hoorbaar geluid is niet nodig, maar volume 0 kan op iOS worden genegeerd
       const u = new SpeechSynthesisUtterance('.')
       u.lang = 'nl-NL'
       u.volume = 0.01
@@ -307,7 +299,6 @@
 
   function speak(text, rate=1.10){
     try{
-      // geen cancel tijdens prime, wel vlak voor normale uitspraak
       speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(text)
       u.lang = 'nl-NL'
@@ -316,7 +307,6 @@
       speechSynthesis.speak(u)
     }catch(e){}
   }
-  // -----------------------------------------------------------
 
   // Settings
   function loadSettings(){
@@ -347,24 +337,53 @@
     showToast('Instellingen bewaard')
   }
 
-  // ---------- LOG: veilig wegschrijven met fallback ----------
-  function logError(level, need){
-    const entry = { level, 'wist niet': need }
+  // Helpers voor datum en tijd
+  function pad2(n){ return n < 10 ? '0' + n : '' + n }
+  function nowDateParts(){
+    const d = new Date()
+    const dag = pad2(d.getDate())
+    const maand = pad2(d.getMonth()+1)
+    const jaar = d.getFullYear()
+    const uur = pad2(d.getHours())
+    const min = pad2(d.getMinutes())
+    // datum als dag-maand-jaar, tijd als uu:mm
+    return { datum: `${dag}-${maand}-${jaar}`, tijd: `${uur}:${min}` }
+  }
+
+  // LOG foutregistratie in gewenst formaat
+  function logError(level, need, clicked){
+    const { datum, tijd } = nowDateParts()
+    const entry = {
+      datum, tijd,
+      level,
+      verwacht: need,
+      geklikt: clicked
+    }
     try{
       const arr = JSON.parse(safeStore.get(LOG_KEY) || '[]')
       arr.push(entry)
       safeStore.set(LOG_KEY, JSON.stringify(arr))
     }catch(e){}
   }
+
+  // Voorbeeldweergave exact in jouw tekstformat
   function previewLog(){
     const arr = JSON.parse(safeStore.get(LOG_KEY) || '[]')
-    const pretty = arr.length ? JSON.stringify(arr, null, 2) : '[]'
-    const safe = pretty.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))
-    const html = `<pre style="white-space:pre-wrap;padding:16px;font:14px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;">${safe}</pre>`
+    const lines = arr.map(e => {
+      return [
+        `datum: ${e.datum}`,
+        `tijd: ${e.tijd}`,
+        `ik zat in level: ${e.level}`,
+        `Het cijfer waarop ik moest klikken was: ${e.verwacht}`,
+        `maar ik klikte op cijfer: ${e.geklikt}`
+      ].join('\n')
+    })
+    const txt = lines.length ? lines.join('\n\n') : 'Geen fouten geregistreerd'
+    const safe = txt.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))
+    const html = `<pre style="white-space:pre-wrap;padding:16px;font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;">${safe}</pre>`
     const w = window.open('', '_blank')
     if(w){ w.document.write(`<title>Foutenlog</title>${html}`); w.document.close() } else { alert('Kan geen venster openen, mogelijk blokkeert je browser dit') }
   }
-  // ----------------------------------------------------------
 
   // Helperhand
   function hideHelper(){ helper.classList.remove('show') }
@@ -458,7 +477,6 @@
 
   // Kliklogica
   async function onBubbleTap(e){
-    // zorg dat TTS klaar is, ook als iemand de startoverlay miste of iOS later ontgrendelt
     await ensureTTSReady()
 
     const el = e.currentTarget
@@ -468,7 +486,8 @@
     const correct = n === state.requiredNext
 
     if(!correct){
-      logError(state.wave, state.requiredNext)
+      // log met datum, tijd, level, verwacht, geklikt
+      logError(state.wave, state.requiredNext, n)
       speak('Oeps, begin opnieuw bij één', 1.04)
       showToast('Fout, begin opnieuw bij 1')
       restartCurrentWaveWithoutTeleport()
@@ -606,12 +625,9 @@
     try{ if(el.requestFullscreen) await el.requestFullscreen(); else if(el.webkitRequestFullscreen) await el.webkitRequestFullscreen() }catch(e){}
   }
 
-  // ---------- Start: TTS direct klaar bij eerste klik ----------
   async function start(){
     await enterFullscreen()
     resize()
-
-    // binnen dezelfde klik: TTS primen en stemmen laden
     await ensureTTSReady()
 
     state.wave = 1; state.requiredNext = 1; state.moving = false
@@ -619,7 +635,6 @@
     badge.textContent = 'Tik het getal op volgorde'
     startOverlay.classList.add('hidden')
 
-    // nu direct hoorbaar
     speak('Tik één', 1.10)
     state.lastInteraction = performance.now()
 
@@ -656,7 +671,6 @@
   saveTeacher.addEventListener('click', () => { saveSettings(); teacherPanel.classList.remove('show') })
   previewBtn.addEventListener('click', () => previewLog())
 
-  // eerste willekeurige tik of toets: TTS klaarzetten als extra zekerheid
   const oncePrime = async () => { await ensureTTSReady(); document.removeEventListener('pointerdown', oncePrime) }
   document.addEventListener('pointerdown', oncePrime, {passive:true})
 
