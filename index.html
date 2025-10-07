@@ -1,581 +1,855 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-  <title>Cijfer Pop Spel</title>
-  <style>
-    :root{
-      /* startkleur, wordt per level vervangen door een pastel uit JS */
-      --bg1: #f3f1ff;
-      --bg2: #eaf7ff;
-      --fg: #0b1020;
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<title>Kleuter Cijfer Pop</title>
+<style>
+  :root{
+    /* pastel achtergrond, per level wisselend in JS */
+    --bg1: #f3f1ff;
+    --bg2: #eaf7ff;
 
-      /* bubbel glans, je ziet grotere, zachte bollen */
-      --bubble-hl: #ffffff;
-      --bubble-mid: #e6faff;
-      --bubble-lo: #ccefff;
-    }
-    *{ box-sizing:border-box; -webkit-tap-highlight-color: rgba(0,0,0,0) }
-    html, body{
-      margin:0;
-      height:100%;
-      background: #fff;
-      color: var(--fg);
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      overscroll-behavior: none;
-      touch-action: none;
-    }
-    #app{
-      position:fixed;
-      inset:0;
-      width:100vw;
-      height:100vh;
-      overflow:hidden;
-      background: radial-gradient(120% 120% at 70% 20%, var(--bg1) 0%, var(--bg2) 60%, #ffffff 100%);
-      transition: background .6s ease;
-    }
+    /* UI kleuren */
+    --ink: #0b1020;
+    --ink-soft: rgba(0,0,0,.08);
 
-    /* bovenste balk, eenvoudig en rustig */
-    .ui{
-      position:absolute;
-      left:0;
-      right:0;
-      top: env(safe-area-inset-top, 0px);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 12px;
-      padding: 12px 16px;
-      pointer-events:none;
-    }
-    .badge{
-      pointer-events:auto;
-      padding: 8px 12px;
-      border-radius: 9999px;
-      background: rgba(0,0,0,.06);
-      backdrop-filter: blur(6px);
-      font-weight: 800;
-      font-size: 14px;
-      letter-spacing: .2px;
-    }
-    .controls{ display:flex; gap:8px; pointer-events:auto }
-    button{
-      border:0;
-      border-radius: 12px;
-      padding: 10px 14px;
-      font-weight: 900;
-      font-size: 14px;
-      color: #0b1020;
-      background: rgba(0,0,0,.08);
-      border: 1px solid rgba(0,0,0,.06);
-      cursor:pointer;
-    }
+    /* bubbel glans en glow */
+    --bubble-hl: #ffffff;
+    --bubble-mid: #eff9ff;
+    --bubble-lo: #d6f0ff;
+    --bubble-glow: rgba(255,255,255,.85);
+  }
 
-    /* overlay voor start, nodig voor audio, werkt op iOS */
-    #startOverlay{
-      position:absolute;
-      inset:0;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:18px;
-      padding: 24px;
-      background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.7));
-      backdrop-filter: blur(4px);
-      text-align:center;
-    }
-    #startOverlay.hidden{ display:none }
-    #startOverlay .title{ font-size: clamp(22px, 3.8vmin, 30px); font-weight: 1000 }
-    #startOverlay .hint{ font-size: clamp(14px, 2.2vmin, 18px); opacity:.9 }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: rgba(0,0,0,0) }
+  html, body{
+    margin:0;
+    height:100%;
+    background:#fff;
+    color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    overscroll-behavior: none;
+    touch-action: none;
+  }
 
-    /* bubbel basis, maat wordt per bubbel gezet in JS */
-    .bubble{
-      position:absolute;
-      display:grid;
-      place-items:center;
-      border-radius: 9999px;
-      font-weight: 1000;
-      font-size: clamp(26px, 4.6vmin, 42px);
-      color: #0b1020;
-      background: radial-gradient(140% 140% at 30% 25%, var(--bubble-hl) 0%, var(--bubble-mid) 40%, var(--bubble-lo) 100%);
-      border: 2px solid rgba(255,255,255,.9);
-      box-shadow:
-        inset 0 1px 1px rgba(255,255,255,.8),
-        inset 0 -10px 18px rgba(0,0,0,.08),
-        0 10px 24px rgba(0,0,0,.12);
-      transform: translate3d(0,0,0) scale(1);
-      will-change: transform;
-      user-select:none; -webkit-user-select:none;
-      transition: transform .18s ease;
-    }
-    .bubble::after{
-      content:"";
-      position:absolute;
-      top: 12%;
-      left: 18%;
-      width: 28%;
-      height: 22%;
-      border-radius: 9999px;
-      background: rgba(255,255,255,.65);
-      filter: blur(1px);
-      transform: rotate(12deg);
-      pointer-events:none;
-    }
+  /* Canvas en parallax lagen */
+  #app{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    background: radial-gradient(120% 120% at 70% 20%, var(--bg1) 0%, var(--bg2) 60%, #ffffff 100%);
+    transition: background .6s ease;
+  }
+  .parallax{
+    position:absolute;
+    inset:-10% -10% -10% -10%;
+    pointer-events:none;
+    filter: blur(20px);
+    opacity:.35;
+  }
+  .blob{
+    position:absolute;
+    width: 35vmax;
+    height: 35vmax;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.7), rgba(255,255,255,0));
+    animation: float 38s linear infinite;
+    mix-blend-mode: screen;
+  }
+  .blob.b2{ width: 28vmax; height: 28vmax; animation-duration: 46s; opacity:.28 }
+  .blob.b3{ width: 40vmax; height: 40vmax; animation-duration: 52s; opacity:.26 }
+  @keyframes float{
+    0%{ transform: translate3d(-10%, -10%, 0) }
+    50%{ transform: translate3d(10%, 8%, 0) }
+    100%{ transform: translate3d(-10%, -10%, 0) }
+  }
 
-    /* speels poppen: korte bounce, draai, ring en confetti */
-    .pop{
-      animation: pop .35s cubic-bezier(.2, .8, .2, 1) forwards;
-    }
-    @keyframes pop{
-      0%{ transform: var(--t) scale(1) rotate(0deg); opacity:1 }
-      45%{ transform: var(--t) scale(1.22) rotate(6deg); opacity:1 }
-      100%{ transform: var(--t) scale(.4) rotate(-12deg); opacity:0 }
-    }
-    .ring{
-      position:absolute;
-      pointer-events:none;
-      border-radius: 9999px;
-      border: 3px solid rgba(0,0,0,.12);
-      transform: translate(-50%, -50%) scale(0.6);
-      opacity: .9;
-      animation: ring .45s ease-out forwards;
-    }
-    @keyframes ring{
-      to{ transform: translate(-50%, -50%) scale(1.4); opacity:0 }
-    }
-    .dot{
-      position:absolute;
-      width: 10px;
-      height: 10px;
-      border-radius:9999px;
-      opacity: .95;
-      transform: translate(-50%, -50%) scale(1);
-      animation: dot .5s ease-out forwards;
-    }
-    @keyframes dot{
-      to{ transform: translate(var(--dx), var(--dy)) scale(.8); opacity:0 }
-    }
+  /* Bovenbalk met grote ronde knoppen */
+  .ui{
+    position:absolute;
+    left:0;
+    right:0;
+    top: env(safe-area-inset-top, 0px);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .badge{
+    padding: 10px 14px;
+    border-radius: 9999px;
+    background: rgba(0,0,0,.06);
+    border: 1px solid rgba(0,0,0,.05);
+    font-weight: 900;
+    font-size: clamp(14px, 2.2vmin, 18px);
+    letter-spacing: .2px;
+  }
+  .controls{ display:flex; gap:10px }
+  .iconbtn{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border: 0;
+    border-radius: 9999px;
+    padding: 12px 16px;
+    font-weight: 900;
+    font-size: clamp(14px, 2.2vmin, 18px);
+    color: var(--ink);
+    background: rgba(0,0,0,.08);
+    border: 1px solid rgba(0,0,0,.06);
+    cursor:pointer;
+  }
+  .iconbtn svg{ width: 22px; height: 22px; flex: 0 0 auto }
 
-    /* korte hint onderin */
-    #toast{
-      position:absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-      padding: 10px 14px;
-      background: rgba(0,0,0,.08);
-      border: 1px solid rgba(0,0,0,.06);
-      color: var(--fg);
-      border-radius: 12px;
-      font-weight: 800;
-      font-size: 14px;
-      opacity: 0;
-      transition: opacity .25s ease;
-      pointer-events:none;
-    }
-    #toast.show{ opacity: 1 }
-  </style>
+  /* Start overlay */
+  #startOverlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:18px;
+    padding:24px;
+    background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.7));
+    backdrop-filter: blur(4px);
+    text-align:center;
+  }
+  #startOverlay.hidden{ display:none }
+  #startOverlay .title{ font-size: clamp(22px, 3.8vmin, 30px); font-weight: 1000 }
+  #startOverlay .hint{ font-size: clamp(14px, 2.2vmin, 18px); opacity:.9 }
+
+  /* Bubbels, nummers groter en met glow */
+  .bubble{
+    position:absolute;
+    display:grid;
+    place-items:center;
+    border-radius: 9999px;
+    font-weight: 1000;
+    font-size: clamp(34px, 6vmin, 56px); /* groter */
+    color: #0b1020;
+    background: radial-gradient(140% 140% at 30% 25%, var(--bubble-hl) 0%, var(--bubble-mid) 40%, var(--bubble-lo) 100%);
+    border: 2px solid rgba(255,255,255,.9);
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,.8),
+      inset 0 -10px 18px rgba(0,0,0,.08),
+      0 12px 28px rgba(0,0,0,.12);
+    transform: translate3d(0,0,0) scale(1);
+    will-change: transform;
+    user-select:none; -webkit-user-select:none;
+    transition: transform .16s ease;
+  }
+  /* subtiele white radial glow achter de bubbel */
+  .bubble::before{
+    content:"";
+    position:absolute;
+    inset:-18%;
+    border-radius:inherit;
+    background: radial-gradient(circle at 50% 50%, var(--bubble-glow), rgba(255,255,255,0) 60%);
+    filter: blur(10px);
+    z-index:-1;
+  }
+  .bubble::after{
+    content:"";
+    position:absolute;
+    top: 12%;
+    left: 18%;
+    width: 28%;
+    height: 22%;
+    border-radius: 9999px;
+    background: rgba(255,255,255,.65);
+    filter: blur(1px);
+    transform: rotate(12deg);
+    pointer-events:none;
+  }
+
+  /* Speelse pop met ring en confetti */
+  .pop{ animation: pop .33s cubic-bezier(.2,.9,.2,1) forwards }
+  @keyframes pop{
+    0%{ transform: var(--t) scale(1) rotate(0deg); opacity:1 }
+    45%{ transform: var(--t) scale(1.25) rotate(5deg); opacity:1 }
+    100%{ transform: var(--t) scale(.4) rotate(-10deg); opacity:0 }
+  }
+  .ring{
+    position:absolute;
+    pointer-events:none;
+    border-radius: 9999px;
+    border: 3px solid rgba(0,0,0,.12);
+    transform: translate(-50%, -50%) scale(.6);
+    opacity:.9;
+    animation: ring .45s ease-out forwards;
+  }
+  @keyframes ring{ to{ transform: translate(-50%, -50%) scale(1.45); opacity:0 } }
+  .dot{
+    position:absolute;
+    width: 12px;
+    height: 12px;
+    border-radius:9999px;
+    opacity:.95;
+    transform: translate(-50%, -50%) scale(1);
+    animation: dot .55s ease-out forwards;
+  }
+  @keyframes dot{ to{ transform: translate(var(--dx), var(--dy)) scale(.8); opacity:0 } }
+
+  /* Helperhand die zacht wijst naar het kleinste cijfer */
+  .helper{
+    position:absolute;
+    width: 64px;
+    height: 64px;
+    transform: translate(-50%, -50%);
+    pointer-events:none;
+    opacity:.0;
+    transition: opacity .25s ease;
+  }
+  .helper.show{ opacity: .9 }
+  .helper .hand{
+    width:100%; height:100%;
+    animation: nod 1.2s ease-in-out infinite;
+  }
+  @keyframes nod{
+    0%,100%{ transform: translateY(0) rotate(0deg) }
+    50%{ transform: translateY(6px) rotate(2deg) }
+  }
+
+  /* Toast onderin */
+  #toast{
+    position:absolute;
+    left:50%;
+    transform: translateX(-50%);
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 14px;
+    background: rgba(0,0,0,.08);
+    border: 1px solid rgba(0,0,0,.06);
+    color: var(--ink);
+    border-radius: 12px;
+    font-weight: 900;
+    font-size: 14px;
+    opacity:0;
+    transition: opacity .25s ease;
+    pointer-events:none;
+  }
+  #toast.show{ opacity:1 }
+
+  /* Leerkracht modus, paneel */
+  .teacher-toggle{
+    position:absolute;
+    left: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    display:flex;
+    gap:8px;
+  }
+  .chip{
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(0,0,0,.06);
+    padding: 8px 10px;
+    border-radius: 9999px;
+    font-weight: 800;
+    cursor:pointer;
+  }
+  .panel{
+    position:absolute;
+    left: 12px;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    width: min(92vw, 420px);
+    background: rgba(255,255,255,.9);
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(0,0,0,.12);
+    padding: 12px;
+    display:none;
+  }
+  .panel.show{ display:block }
+  .panel h3{ margin: 6px 6px 10px 6px; font-size: 16px }
+  .row{ display:flex; align-items:center; gap:10px; margin: 10px 6px }
+  .row label{ width: 160px; font-weight: 800; font-size: 14px }
+  .row input[type="range"]{ flex:1 }
+  .row input[type="number"]{ width:90px; padding:6px 8px; border-radius:10px; border:1px solid rgba(0,0,0,.15) }
+  .panel .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px }
+  .panel button{ padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background: rgba(0,0,0,.06); font-weight:900; cursor:pointer }
+</style>
 </head>
 <body>
-  <div id="app" aria-label="Cijfer Pop Spel" role="application">
+  <div id="app" aria-label="Kleuter Cijfer Pop" role="application">
+    <!-- Parallax zachte vlekken -->
+    <div class="parallax" aria-hidden="true">
+      <div class="blob" style="left:-8%; top:-6%"></div>
+      <div class="blob b2" style="right:-6%; top:10%"></div>
+      <div class="blob b3" style="left:20%; bottom:-12%"></div>
+    </div>
+
+    <!-- UI balk -->
     <div class="ui">
       <div class="badge" id="badge">Tik het getal dat je ziet</div>
       <div class="controls">
-        <button id="speakBtn" type="button" aria-label="Lees de opdracht">Lees voor</button>
-        <button id="resetBtn" type="button" aria-label="Opnieuw">Opnieuw</button>
+        <button class="iconbtn" id="speakBtn" type="button" aria-label="Lees voor">
+          <!-- oor icoon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18c0 2 1.5 3 3 3s3-1 3-3c0-3 3-3 3-7a6 6 0 0 0-12 0"/>
+            <path d="M9 9a3 3 0 0 1 6 0"/>
+          </svg>
+          Lees voor
+        </button>
+        <button class="iconbtn" id="resetBtn" type="button" aria-label="Opnieuw">
+          <!-- ronde pijl -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9"/>
+            <path d="M3 4v8h8"/>
+          </svg>
+          Opnieuw
+        </button>
       </div>
     </div>
 
+    <!-- Helperhand -->
+    <div id="helper" class="helper" aria-hidden="true">
+      <svg class="hand" viewBox="0 0 128 128">
+        <g fill="#ffd7b8" stroke="#ccab93" stroke-width="2">
+          <path d="M38 54c-6 2-9 8-8 14 2 10 10 21 18 28 9 8 20 12 31 11 7 0 12-6 12-13l-1-22c0-3-3-5-6-5h-6l1-8c0-3-2-6-5-6s-5 3-5 6v8h-4l1-10c0-3-2-6-5-6s-5 3-5 6v10h-4l1-10c0-3-2-6-5-6s-5 3-5 6v11z"/>
+        </g>
+        <circle cx="94" cy="94" r="10" fill="rgba(0,0,0,.10)"/>
+      </svg>
+    </div>
+
+    <!-- Start overlay -->
     <div id="startOverlay" aria-modal="true" role="dialog">
       <div class="title">Klaar voor het spel</div>
       <div class="hint">Tik op Start, je ziet eerst alleen 1, daarna komen er steeds meer</div>
-      <button id="startBtn" type="button">Start</button>
+      <button class="iconbtn" id="startBtn" type="button">
+        ▶ Start
+      </button>
     </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
+
+    <!-- Leerkracht modus -->
+    <div class="teacher-toggle">
+      <button class="chip" id="teacherBtn" type="button">Leerkracht</button>
+      <button class="chip" id="exportBtn" type="button">Exporteer log</button>
+    </div>
+    <div class="panel" id="teacherPanel" role="dialog" aria-label="Leerkracht instellingen">
+      <h3>Instellingen</h3>
+      <div class="row">
+        <label for="maxWave">Maximaal cijfer</label>
+        <input id="maxWave" type="number" min="3" max="20" step="1" />
+      </div>
+      <div class="row">
+        <label for="delay">Tijd tussen levels, seconden</label>
+        <input id="delay" type="number" min="0" max="5" step="0.5" />
+      </div>
+      <div class="row">
+        <label>Snelheid bubbels</label>
+        <input id="minSpeed" type="range" min="4" max="40" step="1" />
+        <input id="maxSpeed" type="range" min="6" max="50" step="1" />
+      </div>
+      <div class="row">
+        <label for="logging">Logging aan, uit</label>
+        <input id="logging" type="checkbox" />
+      </div>
+      <div class="actions">
+        <button id="saveTeacher" type="button">Bewaar</button>
+        <button id="closeTeacher" type="button">Sluit</button>
+      </div>
+    </div>
   </div>
 
-  <script>
-  ;(() => {
-    const app = document.getElementById('app')
-    const startOverlay = document.getElementById('startOverlay')
-    const startBtn = document.getElementById('startBtn')
-    const speakBtn = document.getElementById('speakBtn')
-    const resetBtn = document.getElementById('resetBtn')
-    const toast = document.getElementById('toast')
-    const badge = document.getElementById('badge')
+<script>
+;(() => {
+  const app = document.getElementById('app')
+  const startOverlay = document.getElementById('startOverlay')
+  const startBtn = document.getElementById('startBtn')
+  const speakBtn = document.getElementById('speakBtn')
+  const resetBtn = document.getElementById('resetBtn')
+  const toast = document.getElementById('toast')
+  const badge = document.getElementById('badge')
 
-    // Pasteltinten, per level wisselen
-    const PASTELS = [
-      ['#fde2e4', '#fff1f1'], // zacht roze
-      ['#dfe7fd', '#eef3ff'], // licht blauw
-      ['#e4f1e1', '#f2faef'], // mint
-      ['#fff4cc', '#fff9e6'], // zacht geel
-      ['#f3e8ff', '#f9f2ff'], // lila
-      ['#eaf7ff', '#f5fbff'], // ijsblauw
-      ['#ffe9f2', '#fff3f8'], // bloesem
-      ['#e9fff5', '#f3fffa'], // mintgroen
-      ['#fff0e6', '#fff7f2'], // perzik
-      ['#eef7ff', '#f6fbff']  // porselein
-    ]
+  const helper = document.getElementById('helper')
 
-    // Nederlandse telwoorden
-    const NUM_WORDS_NL = {
-      0:'nul',1:'één',2:'twee',3:'drie',4:'vier',5:'vijf',6:'zes',7:'zeven',8:'acht',9:'negen',10:'tien',
-      11:'elf',12:'twaalf',13:'dertien',14:'veertien',15:'vijftien',16:'zestien',17:'zeventien',18:'achttien',19:'negentien',20:'twintig'
-    }
+  const teacherBtn = document.getElementById('teacherBtn')
+  const exportBtn = document.getElementById('exportBtn')
+  const teacherPanel = document.getElementById('teacherPanel')
+  const saveTeacher = document.getElementById('saveTeacher')
+  const closeTeacher = document.getElementById('closeTeacher')
+  const inputMaxWave = document.getElementById('maxWave')
+  const inputDelay = document.getElementById('delay')
+  const inputMinSpeed = document.getElementById('minSpeed')
+  const inputMaxSpeed = document.getElementById('maxSpeed')
+  const inputLogging = document.getElementById('logging')
 
-    const state = {
-      moving: false,          // beweging aan of uit
-      wave: 1,                // huidige level
-      maxWave: 10,
-      bubbles: [],
-      velocities: [],
-      runningRAF: 0,
-      lastTime: 0,
-      voice: null,
-      minSpeed: 10,           // zachte beweging in px per seconde
-      maxSpeed: 22,
-      // bubbelmaten, voor kleuters lekker groot, maar toch variatie
-      minSize: 88,            // px, wordt nog opgeschaald bij grote schermen
-      maxSize: 160
-    }
+  // Pastels per level
+  const PASTELS = [
+    ['#fde2e4', '#fff1f1'],
+    ['#dfe7fd', '#eef3ff'],
+    ['#e4f1e1', '#f2faef'],
+    ['#fff4cc', '#fff9e6'],
+    ['#f3e8ff', '#f9f2ff'],
+    ['#eaf7ff', '#f5fbff'],
+    ['#ffe9f2', '#fff3f8'],
+    ['#e9fff5', '#f3fffa'],
+    ['#fff0e6', '#fff7f2'],
+    ['#eef7ff', '#f6fbff']
+  ]
 
-    // Pastelkleur toepassen
-    function setPastelForWave(wave){
-      const pair = PASTELS[(wave - 1) % PASTELS.length]
-      document.documentElement.style.setProperty('--bg1', pair[0])
-      document.documentElement.style.setProperty('--bg2', pair[1])
-    }
+  const NUM_WORDS_NL = {
+    0:'nul',1:'één',2:'twee',3:'drie',4:'vier',5:'vijf',6:'zes',7:'zeven',8:'acht',9:'negen',10:'tien',
+    11:'elf',12:'twaalf',13:'dertien',14:'veertien',15:'vijftien',16:'zestien',17:'zeventien',18:'achttien',19:'negentien',20:'twintig'
+  }
 
-    // Fullscreen
-    async function enterFullscreen(){
-      const el = document.documentElement
-      try{
-        if(el.requestFullscreen) await el.requestFullscreen()
-        else if(el.webkitRequestFullscreen) await el.webkitRequestFullscreen()
-      }catch(e){}
-    }
+  const SETTINGS_KEY = 'kleuter_cijferpop_settings'
+  const LOG_KEY = 'kleuter_cijferpop_log'
 
-    function resize(){
-      app.style.width = innerWidth + 'px'
-      app.style.height = innerHeight + 'px'
-    }
-    addEventListener('resize', resize, {passive:true})
-    addEventListener('orientationchange', () => setTimeout(resize, 250))
+  const state = {
+    moving: false,
+    wave: 1,
+    maxWave: 10,
+    bubbles: [],
+    velocities: [],
+    runningRAF: 0,
+    lastTime: 0,
+    voice: null,
+    minSpeed: 10,
+    maxSpeed: 22,
+    minSize: 110,
+    maxSize: 190,
+    interLevelDelay: 0.5,   // seconden
+    logging: false,
+    idleMs: 5000,           // helper verschijnt na 5 s geen interactie
+    lastInteraction: 0
+  }
 
-    function rand(min, max){ return Math.random() * (max - min) + min }
-    function showToast(msg){
-      toast.textContent = msg
-      toast.classList.add('show')
-      clearTimeout(showToast._t)
-      showToast._t = setTimeout(() => toast.classList.remove('show'), 1100)
-    }
-
-    // Spraak, voorkeur voor Nederlandse vrouwenstem
-    function loadVoices(){
-      return new Promise(resolve => {
-        const now = speechSynthesis.getVoices()
-        if(now.length) resolve(now)
-        else speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices())
-      })
-    }
-    function isFemaleName(name=''){
-      // veelvoorkomende namen per platform, voorkeur voor vrouw
-      return /(claire|saskia|ellen|lotte|femke|mila|maja|slt|female|woman)/i.test(name)
-    }
-    function isClearlyMale(name=''){
-      return /(xander|willem|stephan|male|man)/i.test(name)
-    }
-    function pickDutchFemale(voices){
-      const nl = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('nl'))
-      const females = nl.filter(v => isFemaleName(v.name) && !isClearlyMale(v.name))
-      if(females.length) return females[0]
-      if(nl.length) return nl[0]
-      // geen NL beschikbaar, neem een vrouwelijke klank op basis van naam
-      const otherFem = voices.filter(v => isFemaleName(v.name))
-      if(otherFem.length) return otherFem[0]
-      return voices[0] || null
-    }
-    function numberWord(n){ return NUM_WORDS_NL[n] || String(n) }
-    function speak(text, rate=1.02){
-      try{
-        speechSynthesis.cancel()
-        const u = new SpeechSynthesisUtterance(text)
-        u.lang = 'nl-NL'
-        u.rate = rate
-        if(state.voice) u.voice = state.voice
-        speechSynthesis.speak(u)
-      }catch(e){}
-    }
-
-    // Confetti en ring bij pop
-    function burst(x, y, baseSize){
-      // ring
-      const ring = document.createElement('div')
-      ring.className = 'ring'
-      const r = Math.max(28, baseSize * 0.5)
-      ring.style.width = r + 'px'
-      ring.style.height = r + 'px'
-      ring.style.left = x + 'px'
-      ring.style.top = y + 'px'
-      app.appendChild(ring)
-      ring.addEventListener('animationend', () => ring.remove(), {once:true})
-
-      // zachte confetti, drie puntjes in babykleuren
-      const dots = 3
-      const colors = ['#ffd6e7', '#e2f2ff', '#e6ffe8', '#fff3d6', '#f3e8ff']
-      for(let i=0;i<dots;i++){
-        const d = document.createElement('div')
-        d.className = 'dot'
-        d.style.left = x + 'px'
-        d.style.top = y + 'px'
-        d.style.background = colors[Math.floor(Math.random()*colors.length)]
-        const dist = Math.max(24, baseSize * 0.35)
-        const angle = rand(0, Math.PI*2)
-        const dx = Math.cos(angle) * dist + 'px'
-        const dy = Math.sin(angle) * dist + 'px'
-        d.style.setProperty('--dx', dx)
-        d.style.setProperty('--dy', dy)
-        app.appendChild(d)
-        d.addEventListener('animationend', () => d.remove(), {once:true})
+  // Settings laden, paneel vullen
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem(SETTINGS_KEY)
+      if(raw){
+        const s = JSON.parse(raw)
+        if(typeof s.maxWave === 'number') state.maxWave = s.maxWave
+        if(typeof s.interLevelDelay === 'number') state.interLevelDelay = s.interLevelDelay
+        if(typeof s.minSpeed === 'number') state.minSpeed = s.minSpeed
+        if(typeof s.maxSpeed === 'number') state.maxSpeed = s.maxSpeed
+        if(typeof s.logging === 'boolean') state.logging = s.logging
       }
+    }catch(e){}
+    inputMaxWave.value = state.maxWave
+    inputDelay.value = state.interLevelDelay
+    inputMinSpeed.value = state.minSpeed
+    inputMaxSpeed.value = state.maxSpeed
+    inputLogging.checked = state.logging
+  }
+  function saveSettings(){
+    state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 20)
+    state.interLevelDelay = clampNum(parseFloat(inputDelay.value), 0, 5)
+    state.minSpeed = clampNum(parseFloat(inputMinSpeed.value), 2, 40)
+    state.maxSpeed = clampNum(parseFloat(inputMaxSpeed.value), state.minSpeed+1, 50)
+    state.logging = !!inputLogging.checked
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      maxWave: state.maxWave,
+      interLevelDelay: state.interLevelDelay,
+      minSpeed: state.minSpeed,
+      maxSpeed: state.maxSpeed,
+      logging: state.logging
+    }))
+    showToast('Instellingen bewaard')
+  }
+
+  function clampNum(v, a, b){ return Math.max(a, Math.min(b, v)) }
+  function clampInt(v, a, b){ return Math.max(a, Math.min(b, v|0)) }
+  function rand(min, max){ return Math.random() * (max - min) + min }
+
+  function setPastelForWave(wave){
+    const pair = PASTELS[(wave - 1) % PASTELS.length]
+    document.documentElement.style.setProperty('--bg1', pair[0])
+    document.documentElement.style.setProperty('--bg2', pair[1])
+  }
+
+  function resize(){
+    app.style.width = innerWidth + 'px'
+    app.style.height = innerHeight + 'px'
+  }
+  addEventListener('resize', resize, {passive:true})
+  addEventListener('orientationchange', () => setTimeout(resize, 250))
+
+  function showToast(msg){
+    toast.textContent = msg
+    toast.classList.add('show')
+    clearTimeout(showToast._t)
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1100)
+  }
+
+  // Spraak, voorkeur voor Nederlandse vrouwenstem, extra snel na tik
+  function loadVoices(){
+    return new Promise(resolve => {
+      const v = speechSynthesis.getVoices()
+      if(v.length) resolve(v)
+      else speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices())
+    })
+  }
+  function isFemaleName(name=''){
+    return /(claire|saskia|ellen|lotte|femke|mila|maja|vrouw|female|woman)/i.test(name)
+  }
+  function pickDutchFemale(voices){
+    const nl = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('nl'))
+    const females = nl.filter(v => isFemaleName(v.name))
+    if(females.length) return females[0]
+    if(nl.length) return nl[0]
+    const otherFem = voices.filter(v => isFemaleName(v.name))
+    if(otherFem.length) return otherFem[0]
+    return voices[0] || null
+  }
+  function word(n){ return NUM_WORDS_NL[n] || String(n) }
+  function speak(text, rate=1.06){
+    try{
+      // meteen spreken, geen wachttijd
+      speechSynthesis.cancel()
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = 'nl-NL'
+      u.rate = rate
+      if(state.voice) u.voice = state.voice
+      speechSynthesis.speak(u)
+    }catch(e){}
+  }
+
+  // Logging
+  function logEvent(type, data){
+    if(!state.logging) return
+    const entry = {
+      t: Date.now(),
+      wave: state.wave,
+      type,
+      ...data
     }
+    try{
+      const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
+      arr.push(entry)
+      localStorage.setItem(LOG_KEY, JSON.stringify(arr))
+    }catch(e){}
+  }
+  function exportLog(){
+    try{
+      const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
+      const blob = new Blob([JSON.stringify(arr, null, 2)], {type:'application/json'})
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'cijferpop-log.json'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    }catch(e){}
+  }
 
-    // Bubbels aanmaken voor ronde 1..wave
-    function createWaveBubbles(){
-      clearBubbles()
-      const W = app.clientWidth
-      const H = app.clientHeight
-      const pad = 16
+  // Helperhand
+  function hideHelper(){ helper.classList.remove('show') }
+  function maybeShowHelper(){
+    const now = performance.now()
+    if(now - state.lastInteraction < state.idleMs) return
+    // wijs naar het kleinste resterende cijfer
+    let minB = null, minN = Infinity
+    for(const b of state.bubbles){
+      const n = parseInt(b.dataset.num,10)
+      if(n < minN){ minN = n; minB = b }
+    }
+    if(!minB) return
+    const r = minB.getBoundingClientRect()
+    const x = r.left + r.width*0.2
+    const y = r.top + r.height*0.2
+    helper.style.left = x + 'px'
+    helper.style.top = y + 'px'
+    helper.classList.add('show')
+  }
+  function touchRegistered(){ 
+    state.lastInteraction = performance.now()
+    hideHelper()
+  }
+  document.addEventListener('pointerdown', touchRegistered, {passive:true})
 
-      for(let n=1; n<=state.wave; n++){
-        const el = document.createElement('div')
-        el.className = 'bubble'
-        el.textContent = n
-        el.dataset.num = n
+  // Bubbels
+  function clearBubbles(){
+    for(const b of state.bubbles){
+      b.removeEventListener('pointerdown', onBubbleTap)
+      b.remove()
+    }
+    state.bubbles = []
+    state.velocities = []
+  }
 
-        // willekeurige maat, groter voor kleuters
-        const baseMin = Math.max(state.minSize, Math.min(innerWidth, innerHeight) * 0.12)
-        const baseMax = Math.max(state.maxSize, Math.min(innerWidth, innerHeight) * 0.20)
-        const size = Math.floor(rand(baseMin, baseMax))
-        el.style.width = size + 'px'
-        el.style.height = size + 'px'
+  function createWaveBubbles(){
+    clearBubbles()
+    const W = app.clientWidth
+    const H = app.clientHeight
+    const pad = 16
+    for(let n=1; n<=state.wave; n++){
+      const el = document.createElement('div')
+      el.className = 'bubble'
+      el.textContent = n
+      el.dataset.num = n
 
-        // z index zodat het laagste cijfer bovenop ligt
-        el.style.zIndex = String(1000 - n)
+      // grotere, willekeurige maat
+      const baseMin = Math.max(state.minSize, Math.min(innerWidth, innerHeight) * 0.14)
+      const baseMax = Math.max(state.maxSize, Math.min(innerWidth, innerHeight) * 0.24)
+      const size = Math.floor(rand(baseMin, baseMax))
+      el.style.width = size + 'px'
+      el.style.height = size + 'px'
 
-        // tijdelijke meting is niet nodig, we kennen de maat
-        let x = rand(pad, Math.max(pad, W - size))
-        let y = rand(pad + 60, Math.max(pad + 60, H - size))
-        let tries = 0
-        while(overlapsExisting(x, y, size) && tries < 200){
-          x = rand(pad, Math.max(pad, W - size))
-          y = rand(pad + 60, Math.max(pad + 60, H - size))
-          tries++
-        }
+      // laagste cijfer bovenop
+      el.style.zIndex = String(1000 - n)
 
-        el.style.setProperty('--t', `translate3d(${x}px, ${y}px, 0)`)
-        el.style.transform = `translate3d(${x}px, ${y}px, 0)`
-        el.dataset.x = x
-        el.dataset.y = y
-        el.dataset.size = size
-
-        el.addEventListener('pointerdown', onBubbleTap, {passive:true})
-
-        // snelheid voor beweging
-        const sp = rand(state.minSpeed, state.maxSpeed)
-        const angle = rand(0, Math.PI * 2)
-        const v = { vx: Math.cos(angle)*sp, vy: Math.sin(angle)*sp }
-
-        app.appendChild(el)
-        state.bubbles.push(el)
-        state.velocities.push(v)
+      let x = rand(pad, Math.max(pad, W - size))
+      let y = rand(pad + 70, Math.max(pad + 70, H - size))
+      let tries = 0
+      while(overlapsExisting(x, y, size) && tries < 240){
+        x = rand(pad, Math.max(pad, W - size))
+        y = rand(pad + 70, Math.max(pad + 70, H - size))
+        tries++
       }
 
+      el.style.setProperty('--t', `translate3d(${x}px, ${y}px, 0)`)
+      el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+      el.dataset.x = x
+      el.dataset.y = y
+      el.dataset.size = size
+
+      el.addEventListener('pointerdown', onBubbleTap, {passive:true})
+
+      const sp = rand(state.minSpeed, state.maxSpeed)
+      const angle = rand(0, Math.PI*2)
+      const v = { vx: Math.cos(angle)*sp, vy: Math.sin(angle)*sp }
+
+      app.appendChild(el)
+      state.bubbles.push(el)
+      state.velocities.push(v)
+    }
+    enforceStacking()
+  }
+
+  function overlapsExisting(x, y, size){
+    for(const b of state.bubbles){
+      const bx = parseFloat(b.dataset.x)
+      const by = parseFloat(b.dataset.y)
+      const bs = parseFloat(b.dataset.size)
+      const dx = (bx + bs*.5) - (x + size*.5)
+      const dy = (by + bs*.5) - (y + size*.5)
+      const rr = (bs*.5 + size*.5)
+      if(dx*dx + dy*dy < rr*rr * 0.92) return true
+    }
+    return false
+  }
+
+  function enforceStacking(){
+    let minN = Infinity
+    for(const b of state.bubbles){
+      const n = parseInt(b.dataset.num, 10)
+      if(n < minN) minN = n
+    }
+    for(const b of state.bubbles){
+      const n = parseInt(b.dataset.num, 10)
+      b.style.zIndex = String(1000 - n)
+    }
+    const minB = state.bubbles.find(b => parseInt(b.dataset.num,10) === minN)
+    if(minB){
+      const x = parseFloat(minB.dataset.x), y = parseFloat(minB.dataset.y)
+      minB.style.transform = `translate3d(${x}px, ${y}px, 1px)`
+      setTimeout(() => { minB.style.transform = `translate3d(${x}px, ${y}px, 0)` }, 0)
+    }
+  }
+
+  // Pop effecten
+  function burst(x, y, baseSize){
+    const ring = document.createElement('div')
+    ring.className = 'ring'
+    const r = Math.max(30, baseSize * 0.55)
+    ring.style.width = r + 'px'
+    ring.style.height = r + 'px'
+    ring.style.left = x + 'px'
+    ring.style.top = y + 'px'
+    app.appendChild(ring)
+    ring.addEventListener('animationend', () => ring.remove(), {once:true})
+
+    const colors = ['#ffd6e7', '#e2f2ff', '#e6ffe8', '#fff3d6', '#f3e8ff']
+    for(let i=0;i<3;i++){
+      const d = document.createElement('div')
+      d.className = 'dot'
+      d.style.left = x + 'px'
+      d.style.top = y + 'px'
+      d.style.background = colors[Math.floor(Math.random()*colors.length)]
+      const dist = Math.max(28, baseSize * 0.35)
+      const angle = rand(0, Math.PI*2)
+      const dx = Math.cos(angle) * dist + 'px'
+      const dy = Math.sin(angle) * dist + 'px'
+      d.style.setProperty('--dx', dx)
+      d.style.setProperty('--dy', dy)
+      app.appendChild(d)
+      d.addEventListener('animationend', () => d.remove(), {once:true})
+    }
+  }
+
+  // Interactie
+  function onBubbleTap(e){
+    const el = e.currentTarget
+    const n = parseInt(el.dataset.num, 10)
+    if(!state.bubbles.includes(el)) return
+
+    // logging: was dit het laagste resterende
+    const minRemaining = Math.min(...state.bubbles.map(b => parseInt(b.dataset.num,10)))
+    const correct = n === minRemaining
+    logEvent('tap', { n, correct })
+
+    // stem extra snel na klik
+    speak(word(n), 1.10)
+
+    const rect = el.getBoundingClientRect()
+    burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
+
+    el.classList.add('pop')
+    el.addEventListener('animationend', () => {
+      const idx = state.bubbles.indexOf(el)
+      if(idx >= 0){
+        state.bubbles.splice(idx, 1)
+        state.velocities.splice(idx, 1)
+      }
+      el.remove()
+      if(state.bubbles.length === 0){
+        setTimeout(nextWave, state.interLevelDelay * 1000)
+      }else{
+        enforceStacking()
+      }
+    }, {once:true})
+  }
+
+  // Volgende level
+  function nextWave(){
+    setPastelForWave(state.wave + 1)
+    state.wave = state.wave + 1
+    if(state.wave > state.maxWave){
+      state.wave = 1
+      showToast('We beginnen opnieuw bij 1')
+      speak('We beginnen opnieuw bij één', 1.02)
+      logEvent('reset-cycle', {})
+    }else{
+      showToast(`Nu tot en met ${state.wave}`)
+      speak(`Nu tot en met ${word(state.wave)}`, 1.02)
+      logEvent('next-wave', { wave: state.wave })
+    }
+    state.moving = state.wave >= 2
+    createWaveBubbles()
+    badge.textContent = `Tik de cijfers weg tot en met ${state.wave}`
+    state.lastInteraction = performance.now()
+  }
+
+  // Animatie loop
+  function tick(ts){
+    // helper tonen bij inactiviteit
+    maybeShowHelper()
+
+    if(!state.moving){
+      state.lastTime = ts
+      state.runningRAF = requestAnimationFrame(tick)
+      return
+    }
+    if(!state.lastTime) state.lastTime = ts
+    const dt = Math.min(0.05, (ts - state.lastTime) / 1000)
+    state.lastTime = ts
+
+    const W = app.clientWidth
+    const H = app.clientHeight
+
+    for(let i=0;i<state.bubbles.length;i++){
+      const el = state.bubbles[i]
+      const v = state.velocities[i]
+      let x = parseFloat(el.dataset.x)
+      let y = parseFloat(el.dataset.y)
+      const s = parseFloat(el.dataset.size)
+
+      x += v.vx * dt
+      y += v.vy * dt
+
+      // zachte botsing
+      if(x <= 0){ x = 0; v.vx = Math.abs(v.vx)*0.98 }
+      if(y <= 0){ y = 0; v.vy = Math.abs(v.vy)*0.98 }
+      if(x + s >= W){ x = W - s; v.vx = -Math.abs(v.vx)*0.98 }
+      if(y + s >= H){ y = H - s; v.vy = -Math.abs(v.vy)*0.98 }
+
+      el.dataset.x = x
+      el.dataset.y = y
+      el.style.setProperty('--t', `translate3d(${x}px, ${y}px, 0)`)
+      el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+    }
+
+    // af en toe stapeling herbevestigen
+    if(Math.floor(performance.now()/1000)%2===0){
       enforceStacking()
     }
 
-    function overlapsExisting(x, y, size){
-      for(const b of state.bubbles){
-        const bx = parseFloat(b.dataset.x)
-        const by = parseFloat(b.dataset.y)
-        const bs = parseFloat(b.dataset.size)
-        const dx = (bx + bs*.5) - (x + size*.5)
-        const dy = (by + bs*.5) - (y + size*.5)
-        const rr = (bs*.5 + size*.5)
-        if(dx*dx + dy*dy < rr*rr * 0.92) return true
-      }
-      return false
-    }
+    state.runningRAF = requestAnimationFrame(tick)
+  }
 
-    function clearBubbles(){
-      for(const b of state.bubbles){
-        b.removeEventListener('pointerdown', onBubbleTap)
-        b.remove()
-      }
-      state.bubbles = []
-      state.velocities = []
-    }
-
-    // Klik op bubbel
-    function onBubbleTap(e){
-      const el = e.currentTarget
-      const n = parseInt(el.dataset.num, 10)
-      if(!state.bubbles.includes(el)) return
-
-      // spreek cijfernaam met voorkeur voor vrouwenstem
-      speak(numberWord(n))
-
-      // pop animatie en speelse effecten
-      const rect = el.getBoundingClientRect()
-      const cx = rect.left + rect.width/2
-      const cy = rect.top + rect.height/2
-      burst(cx, cy, parseFloat(el.dataset.size))
-
-      el.classList.add('pop')
-      el.addEventListener('animationend', () => {
-        const idx = state.bubbles.indexOf(el)
-        if(idx >= 0){
-          state.bubbles.splice(idx, 1)
-          state.velocities.splice(idx, 1)
-        }
-        el.remove()
-        if(state.bubbles.length === 0){
-          nextWave()
-        }else{
-          enforceStacking()
-        }
-      }, {once:true})
-    }
-
-    // laagste cijfer bovenop
-    function enforceStacking(){
-      let minN = Infinity
-      for(const b of state.bubbles){
-        const n = parseInt(b.dataset.num, 10)
-        if(n < minN) minN = n
-      }
-      for(const b of state.bubbles){
-        const n = parseInt(b.dataset.num, 10)
-        b.style.zIndex = String(1000 - n)
-      }
-      const minB = state.bubbles.find(b => parseInt(b.dataset.num,10) === minN)
-      if(minB){
-        const x = parseFloat(minB.dataset.x), y = parseFloat(minB.dataset.y)
-        minB.style.transform = `translate3d(${x}px, ${y}px, 1px)`
-        setTimeout(() => { minB.style.transform = `translate3d(${x}px, ${y}px, 0)` }, 0)
-      }
-    }
-
-    // Volgende level
-    function nextWave(){
-      // pastel wissel
-      setPastelForWave(state.wave + 1)
-
-      // verhoog, reset na max
-      state.wave = state.wave + 1
-      if(state.wave > state.maxWave){
-        state.wave = 1
-        showToast('We beginnen opnieuw bij 1')
-        speak('We beginnen opnieuw bij één', 1.0)
-      }else{
-        showToast(`Nu tot en met ${state.wave}`)
-        speak(`Nu tot en met ${numberWord(state.wave)}`, 1.0)
-      }
-
-      // vanaf level 2 bewegen de cijfers langzaam
-      state.moving = state.wave >= 2
-
-      createWaveBubbles()
-      badge.textContent = `Tik de cijfers weg tot en met ${state.wave}`
-    }
-
-    // Animatie loop
-    function tick(ts){
-      if(!state.moving){ state.lastTime = ts; state.runningRAF = requestAnimationFrame(tick); return }
-      if(!state.lastTime) state.lastTime = ts
-      const dt = Math.min(0.05, (ts - state.lastTime) / 1000)
-      state.lastTime = ts
-
-      const W = app.clientWidth
-      const H = app.clientHeight
-
-      for(let i=0;i<state.bubbles.length;i++){
-        const el = state.bubbles[i]
-        const v = state.velocities[i]
-        let x = parseFloat(el.dataset.x)
-        let y = parseFloat(el.dataset.y)
-        const s = parseFloat(el.dataset.size)
-
-        x += v.vx * dt
-        y += v.vy * dt
-
-        // randen, zacht kaatsen
-        if(x <= 0){ x = 0; v.vx = Math.abs(v.vx) }
-        if(y <= 0){ y = 0; v.vy = Math.abs(v.vy) }
-        if(x + s >= W){ x = W - s; v.vx = -Math.abs(v.vx) }
-        if(y + s >= H){ y = H - s; v.vy = -Math.abs(v.vy) }
-
-        el.dataset.x = x
-        el.dataset.y = y
-        el.style.setProperty('--t', `translate3d(${x}px, ${y}px, 0)`)
-        el.style.transform = `translate3d(${x}px, ${y}px, 0)`
-      }
-
-      // stapeling af en toe herbevestigen
-      if(Math.floor(performance.now()/1000)%2===0){
-        enforceStacking()
-      }
-
-      state.runningRAF = requestAnimationFrame(tick)
-    }
-
-    // Start, Reset
-    async function start(){
-      await enterFullscreen()
-      resize()
-      const voices = await loadVoices()
-      state.voice = pickDutchFemale(voices)
-
-      // start bij 1, stilstaand, alleen 1 zichtbaar
-      state.wave = 1
-      state.moving = false
-      setPastelForWave(1)
-      clearBubbles()
-      createWaveBubbles()
-      badge.textContent = 'Tik het getal dat je ziet'
-      startOverlay.classList.add('hidden')
-      showToast('Tik 1')
-      speak('Tik één', 1.02)
-
-      cancelAnimationFrame(state.runningRAF)
-      state.lastTime = 0
-      state.runningRAF = requestAnimationFrame(tick)
-    }
-
-    function reset(){
-      start()
-    }
-
-    // UI events
-    startBtn.addEventListener('click', start)
-    resetBtn.addEventListener('click', reset)
-    speakBtn.addEventListener('click', () => {
-      if(state.bubbles.length === 1 && state.wave === 1){
-        speak('Tik één', 1.02)
-        showToast('Tik 1')
-      }else{
-        speak(`Tik de cijfers weg tot en met ${numberWord(state.wave)}`, 1.02)
-      }
-    })
-
-    // Eerste layout en voorkom rubberband scroll op iOS
+  // Start en reset
+  async function enterFullscreen(){
+    const el = document.documentElement
+    try{
+      if(el.requestFullscreen) await el.requestFullscreen()
+      else if(el.webkitRequestFullscreen) await el.webkitRequestFullscreen()
+    }catch(e){}
+  }
+  async function start(){
+    await enterFullscreen()
     resize()
-    document.addEventListener('touchmove', e => e.preventDefault(), {passive:false})
-  })()
-  </script>
+    loadSettings()
+    const voices = await loadVoices()
+    state.voice = pickDutchFemale(voices)
+
+    state.wave = 1
+    state.moving = false
+    setPastelForWave(1)
+    clearBubbles()
+    createWaveBubbles()
+    badge.textContent = 'Tik het getal dat je ziet'
+    startOverlay.classList.add('hidden')
+    showToast('Tik 1')
+    speak('Tik één', 1.06)
+    state.lastInteraction = performance.now()
+
+    cancelAnimationFrame(state.runningRAF)
+    state.lastTime = 0
+    state.runningRAF = requestAnimationFrame(tick)
+  }
+  function reset(){
+    logEvent('reset', {})
+    start()
+  }
+
+  // UI events
+  startBtn.addEventListener('click', start)
+  resetBtn.addEventListener('click', reset)
+  speakBtn.addEventListener('click', () => {
+    if(state.bubbles.length === 1 && state.wave === 1){
+      speak('Tik één', 1.06)
+      showToast('Tik 1')
+    }else{
+      speak(`Tik de cijfers weg tot en met ${word(state.wave)}`, 1.06)
+    }
+  })
+
+  teacherBtn.addEventListener('click', () => {
+    teacherPanel.classList.toggle('show')
+    if(teacherPanel.classList.contains('show')) loadSettings()
+  })
+  closeTeacher.addEventListener('click', () => teacherPanel.classList.remove('show'))
+  saveTeacher.addEventListener('click', () => { saveSettings(); teacherPanel.classList.remove('show') })
+  exportBtn.addEventListener('click', exportLog)
+
+  // Inactief timer reset bij bewegingen en klikken
+  ;['pointerdown','keydown','touchstart'].forEach(ev => {
+    document.addEventListener(ev, () => { state.lastInteraction = performance.now(); hideHelper() }, {passive:true})
+  })
+
+  // Eerste layout en scrollpreventie
+  resize()
+  document.addEventListener('touchmove', e => e.preventDefault(), {passive:false})
+})();
+</script>
 </body>
 </html>
