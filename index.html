@@ -1,180 +1,512 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Stipjes Tellen - Exacte Versie</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <title>Nummercirkels Spel</title>
+  <style>
+    :root{
+      --bg: #0b1020;
+      --fg: #ffffff;
+      --accent: #6ee7ff;
+      --accent2: #b993ff;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: rgba(0,0,0,0)}
+    html, body{
+      margin:0;
+      padding:0;
+      height:100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      overscroll-behavior: none;
+      touch-action: none;
+    }
+    #app{
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100vh;
+      overflow:hidden;
+      background: radial-gradient(120% 120% at 80% 20%, #101736 0%, #0b1020 55%, #090e1a 100%);
+    }
 
-    <style>
-        /* --- CSS Gedeelte --- */
-        :root {
-            --animation-speed: 0.3s;
-        }
+    /* UI bovenlaag */
+    .ui{
+      position:absolute;
+      left:0;
+      right:0;
+      top: env(safe-area-inset-top, 0px);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      pointer-events:none;
+      mix-blend-mode: normal;
+    }
+    .badge{
+      pointer-events:auto;
+      padding: 8px 12px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(6px);
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: .2px;
+    }
+    .controls{
+      pointer-events:auto;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    button{
+      border:0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      font-size: 14px;
+      color: #0b1020;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 6px 20px rgba(110,231,255,.2);
+      cursor:pointer;
+    }
+    button.secondary{
+      color: var(--fg);
+      background: rgba(255,255,255,.1);
+      box-shadow: none;
+      border: 1px solid rgba(255,255,255,.12);
+    }
 
-        body {
-            font-family: 'Helvetica Neue', sans-serif;
-            margin: 0;
-            background-color: #48D1CC; /* Startkleur uit video */
-            transition: background-color 0.5s ease;
-            -webkit-tap-highlight-color: transparent; /* Voorkomt blauwe flits op mobiel */
-        }
+    /* Cirkels */
+    .bubble{
+      position:absolute;
+      display:grid;
+      place-items:center;
+      border-radius: 9999px;
+      user-select:none;
+      -webkit-user-select:none;
+      width: clamp(56px, 9.5vmin, 96px);
+      height: clamp(56px, 9.5vmin, 96px);
+      font-weight: 900;
+      font-size: clamp(20px, 4vmin, 32px);
+      color: #0b1020;
+      background: radial-gradient(140% 140% at 30% 25%, #ffffff 0%, #d9f7ff 35%, #a8ecff 70%, #7bdbff 100%);
+      box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.6),
+        inset 0 -8px 14px rgba(0,0,0,.12),
+        0 12px 30px rgba(0,0,0,.25);
+      border: 2px solid rgba(255,255,255,.6);
+      will-change: transform;
+    }
+    .bubble::after{
+      content:"";
+      position:absolute;
+      top: 12%;
+      left: 18%;
+      width: 28%;
+      height: 22%;
+      border-radius: 9999px;
+      background: rgba(255,255,255,.65);
+      filter: blur(1px);
+      transform: rotate(12deg);
+      pointer-events:none;
+    }
 
-        #game-container {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-            overflow: hidden; /* Zorgt dat stippen niet buiten beeld kunnen */
-        }
+    /* Overlay om audio en fullscreen te starten */
+    #startOverlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:18px;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.6));
+      backdrop-filter: blur(6px);
+      text-align:center;
+    }
+    #startOverlay .title{
+      font-size: clamp(22px, 3.6vmin, 30px);
+      font-weight: 900;
+      letter-spacing:.2px;
+    }
+    #startOverlay .hint{
+      font-size: clamp(14px, 2.2vmin, 18px);
+      opacity:.85;
+    }
+    #startOverlay.hidden{ display:none }
 
-        .dot {
-            border-radius: 50%;
-            position: absolute;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            user-select: none;
-            
-            /* Stijl uit de video */
-            border: 8px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            text-shadow: 0 2px 4px rgba(0,0,0,0.25);
-
-            /* Pop-in animatie */
-            animation: pop-in var(--animation-speed) ease-out forwards;
-            
-            /* Transitie voor als de stip verdwijnt */
-            transition: transform var(--animation-speed) ease-in, opacity var(--animation-speed) ease-in;
-        }
-
-        /* Animatie voor het verschijnen van de stippen */
-        @keyframes pop-in {
-            from {
-                transform: scale(0);
-                opacity: 0;
-            }
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-        
-        /* Klasse om een stip te laten verdwijnen */
-        .popped {
-            transform: scale(0);
-            opacity: 0;
-            pointer-events: none; /* Niet meer klikbaar tijdens animatie */
-        }
-
-    </style>
+    /* Meldingen onderin, bijvoorbeeld feedback */
+    #toast{
+      position:absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      padding: 10px 14px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--fg);
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity .25s ease;
+      pointer-events:none;
+    }
+    #toast.show{ opacity: 1 }
+  </style>
 </head>
 <body>
+  <div id="app" aria-label="Nummercirkels spel" role="application">
+    <div class="ui" aria-hidden="false">
+      <div class="badge">Tik in volgorde van klein naar groot</div>
+      <div class="controls">
+        <button id="speakBtn" type="button" class="secondary" aria-label="Lees doel voor">Lees voor</button>
+        <button id="resetBtn" type="button" class="secondary" aria-label="Opnieuw">Opnieuw</button>
+      </div>
+    </div>
 
-    <div id="game-container">
-        </div>
+    <div id="startOverlay" aria-modal="true" role="dialog">
+      <div class="title">Klaar voor het spel?</div>
+      <div class="hint">Tik op Start, geef toestemming voor geluid, daarna zie je bewegende cirkels met cijfers</div>
+      <button id="startBtn" type="button" aria-label="Start het spel">Start</button>
+    </div>
 
-    <script>
-        /* --- JavaScript Gedeelte --- */
-        
-        const gameContainer = document.getElementById('game-container');
+    <div id="toast" role="status" aria-live="polite"></div>
+  </div>
 
-        // Spelvariabelen
-        let currentLevel = 2; // Het spel in de video start met het tellen tot 2
-        let nextNumberToClick = 1;
+  <script>
+    ;(() => {
+      const app = document.getElementById('app')
+      const startOverlay = document.getElementById('startOverlay')
+      const startBtn = document.getElementById('startBtn')
+      const speakBtn = document.getElementById('speakBtn')
+      const resetBtn = document.getElementById('resetBtn')
+      const toast = document.getElementById('toast')
 
-        // Kleurenschema's uit de video
-        const BACKGROUND_COLORS = ['#48D1CC', '#4A90E2', '#A8E6CF', '#9B59B6', '#F1C40F', '#E74C3C'];
-        const DOT_COLORS = ['#FF6B6B', '#F7D154', '#4ECDC4', '#726DA8', '#F79256', '#4A90E2', '#2ECC71'];
-        
-        /**
-         * Spreekt een getal uit in het Engels (net als de video).
-         * @param {number} number Het getal dat uitgesproken moet worden.
-         */
-        function speakNumber(number) {
-            if ('speechSynthesis' in window) {
-                // Annuleer eventuele vorige spraak om te voorkomen dat ze door elkaar lopen
-                window.speechSynthesis.cancel(); 
-                const utterance = new SpeechSynthesisUtterance(number.toString());
-                utterance.lang = 'en-US'; // Engels, net als in de video
-                utterance.rate = 1.0;
-                utterance.pitch = 1.2;
-                window.speechSynthesis.speak(utterance);
-            }
+      const state = {
+        bubbles: [],
+        velocities: [],
+        target: 1,
+        running: false,
+        lastTime: 0,
+        rafId: 0,
+        voice: null,
+        minSpeed: 12,   // pixels per seconde
+        maxSpeed: 28,   // pixels per seconde
+        count: 10
+      }
+
+      // Fullscreen helper
+      async function enterFullscreen(){
+        const el = document.documentElement
+        try{
+          if(el.requestFullscreen) return await el.requestFullscreen()
+          if(el.webkitRequestFullscreen) return await el.webkitRequestFullscreen()
+        }catch(e){}
+      }
+
+      // Orientation en resize, viewport herberekenen
+      function resize(){
+        // Houd app op volledige viewport
+        app.style.width = window.innerWidth + 'px'
+        app.style.height = window.innerHeight + 'px'
+      }
+      window.addEventListener('resize', resize, {passive:true})
+      window.addEventListener('orientationchange', () => {
+        setTimeout(resize, 250)
+      })
+
+      // Bubbles maken
+      function createBubbles(){
+        clearBubbles()
+        const pad = 16
+        const W = app.clientWidth
+        const H = app.clientHeight
+
+        for(let n=1; n<=state.count; n++){
+          const el = document.createElement('div')
+          el.className = 'bubble'
+          el.textContent = n
+          // z index om het laagste getal altijd bovenop te tonen
+          // kleinere n krijgt grotere z index
+          el.style.zIndex = String(1000 - n)
+
+          // willekeurige startpositie, weg van randen
+          const size = measureBubble(el)
+          let x = rand(pad, Math.max(pad, W - size))
+          let y = rand(pad + 60, Math.max(pad + 60, H - size)) // niet onder UI balk spawnen
+
+          // simpele poging om beginoverlap te beperken
+          let tries = 0
+          while(overlapsExisting(x, y, size) && tries < 200){
+            x = rand(pad, Math.max(pad, W - size))
+            y = rand(pad + 60, Math.max(pad + 60, H - size))
+            tries++
+          }
+          position(el, x, y)
+
+          // snelheid, langzaam en smooth
+          const sp = rand(state.minSpeed, state.maxSpeed)
+          const angle = rand(0, Math.PI * 2)
+          const vx = Math.cos(angle) * sp
+          const vy = Math.sin(angle) * sp
+
+          el.dataset.x = x
+          el.dataset.y = y
+          el.dataset.size = size
+          el.dataset.num = n
+
+          el.addEventListener('pointerdown', onBubbleTap)
+
+          app.appendChild(el)
+          state.bubbles.push(el)
+          state.velocities.push({vx, vy})
         }
 
-        function setupLevel() {
-            gameContainer.innerHTML = '';
-            nextNumberToClick = 1;
+        // Zorg dat laagste getal echt bovenop ligt
+        enforceStacking()
+      }
 
-            // Verander de achtergrondkleur voor het level
-            document.body.style.backgroundColor = BACKGROUND_COLORS[(currentLevel - 2) % BACKGROUND_COLORS.length];
+      function clearBubbles(){
+        for(const b of state.bubbles){
+          b.removeEventListener('pointerdown', onBubbleTap)
+          b.remove()
+        }
+        state.bubbles = []
+        state.velocities = []
+      }
 
-            const dots = [];
-            for (let i = 1; i <= currentLevel; i++) {
-                const dot = document.createElement('div');
-                dot.classList.add('dot');
-                dot.textContent = i;
-                dot.dataset.number = i;
+      function measureBubble(el){
+        // tijdelijk toevoegen als nodig om maat te krijgen
+        app.appendChild(el)
+        const rect = el.getBoundingClientRect()
+        const size = Math.max(rect.width, rect.height)
+        el.remove()
+        return size
+      }
 
-                // Variabele grootte, net als in de video
-                const minSize = 70; // in pixels
-                const maxSize = 150; // in pixels
-                const size = Math.random() * (maxSize - minSize) + minSize;
-                dot.style.width = `${size}px`;
-                dot.style.height = `${size}px`;
-                dot.style.fontSize = `${size * 0.5}px`;
-                dot.style.borderWidth = `${size * 0.08}px`;
+      function position(el, x, y){
+        el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+      }
 
+      function overlapsExisting(x, y, size){
+        for(const b of state.bubbles){
+          const bx = parseFloat(b.dataset.x)
+          const by = parseFloat(b.dataset.y)
+          const bs = parseFloat(b.dataset.size)
+          const dx = (bx + bs * .5) - (x + size * .5)
+          const dy = (by + bs * .5) - (y + size * .5)
+          const r = bs * .5 + size * .5
+          if(dx*dx + dy*dy < r*r * 0.92) return true
+        }
+        return false
+      }
 
-                // Willekeurige kleur
-                dot.style.backgroundColor = DOT_COLORS[Math.floor(Math.random() * DOT_COLORS.length)];
+      function rand(min, max){
+        return Math.random() * (max - min) + min
+      }
 
-                // Willekeurige positie, met overlap toegestaan
-                const containerRect = gameContainer.getBoundingClientRect();
-                const x = Math.random() * (containerRect.width - size);
-                const y = Math.random() * (containerRect.height - size);
-                dot.style.left = `${x}px`;
-                dot.style.top = `${y}px`;
-                
-                // Z-index zodat hogere nummers soms over lagere kunnen liggen
-                dot.style.zIndex = Math.floor(Math.random() * currentLevel);
+      function clamp(val, min, max){
+        return Math.max(min, Math.min(max, val))
+      }
 
-                dot.addEventListener('click', handleDotClick);
-                dots.push(dot);
-            }
-            
-            // Voeg de stippen toe aan de container
-            dots.forEach(dot => gameContainer.appendChild(dot));
+      // Animatie
+      function tick(ts){
+        if(!state.running){ return }
+        if(!state.lastTime) state.lastTime = ts
+        const dt = Math.min(0.05, (ts - state.lastTime) / 1000) // cap delta voor stabiliteit
+        state.lastTime = ts
+
+        const W = app.clientWidth
+        const H = app.clientHeight
+
+        for(let i=0; i<state.bubbles.length; i++){
+          const el = state.bubbles[i]
+          const v = state.velocities[i]
+          let x = parseFloat(el.dataset.x)
+          let y = parseFloat(el.dataset.y)
+          const s = parseFloat(el.dataset.size)
+
+          x += v.vx * dt
+          y += v.vy * dt
+
+          // bots met randen, rustig terugkaatsen
+          if(x <= 0){ x = 0; v.vx = Math.abs(v.vx) }
+          if(y <= 0){ y = 0; v.vy = Math.abs(v.vy) }
+          if(x + s >= W){ x = W - s; v.vx = -Math.abs(v.vx) }
+          if(y + s >= H){ y = H - s; v.vy = -Math.abs(v.vy) }
+
+          el.dataset.x = x
+          el.dataset.y = y
+          position(el, x, y)
         }
 
-        function handleDotClick(event) {
-            const clickedDot = event.target;
-            const clickedNumber = parseInt(clickedDot.dataset.number);
-
-            if (clickedNumber === nextNumberToClick) {
-                // Juiste stip!
-                speakNumber(clickedNumber);
-                
-                // Start de "pop" animatie om te verdwijnen
-                clickedDot.classList.add('popped');
-                
-                nextNumberToClick++;
-
-                // Controleer of het level is voltooid
-                if (nextNumberToClick > currentLevel) {
-                    currentLevel++;
-                    // Wacht even voordat het volgende level start
-                    setTimeout(setupLevel, 800); // 0.8 seconde wachttijd
-                }
-            } 
-            // Geen actie bij een foute klik, net als in de video.
+        // af en toe de stapeling afdwingen om het kleinste getal bovenop te houden
+        if(Math.floor(performance.now() / 1000) % 2 === 0){
+          enforceStacking()
         }
 
-        // Start het eerste level
-        setupLevel();
+        state.rafId = requestAnimationFrame(tick)
+      }
 
-    </script>
+      // laagste cijfer bovenop
+      function enforceStacking(){
+        let minN = Infinity
+        for(const b of state.bubbles){
+          const n = parseInt(b.dataset.num, 10)
+          if(n < minN) minN = n
+        }
+        for(const b of state.bubbles){
+          const n = parseInt(b.dataset.num, 10)
+          b.style.zIndex = String(1000 - n) // hoe kleiner, hoe hoger
+        }
+        // breng de echte kleinste extra naar voren door een mini herflow
+        const minBubble = state.bubbles.find(b => parseInt(b.dataset.num, 10) === minN)
+        if(minBubble){
+          minBubble.style.transform += ' translateZ(1px)'
+          // haal de extra Z weer weg bij volgende frame om stijl te resetten
+          setTimeout(() => {
+            const x = parseFloat(minBubble.dataset.x)
+            const y = parseFloat(minBubble.dataset.y)
+            position(minBubble, x, y)
+          }, 0)
+        }
+      }
+
+      // Interactie
+      function onBubbleTap(e){
+        const el = e.currentTarget
+        const n = parseInt(el.dataset.num, 10)
+        if(n === state.target){
+          // correct
+          speak(`Goed zo, pak nu nummer ${state.target + 1}`, {rate: 1.02})
+          showToast(`Goed gedaan, ga door met ${state.target + 1}`)
+          // laat de bubble kort pulsen
+          el.animate(
+            [
+              { transform: el.style.transform + ' scale(1)' },
+              { transform: el.style.transform + ' scale(1.12)' },
+              { transform: el.style.transform + ' scale(1)' },
+            ],
+            { duration: 260, easing: 'ease-out' }
+          )
+          state.target += 1
+          // update badge
+          updateBadge()
+          if(state.target > state.count){
+            speak('Knap gedaan, je hebt ze allemaal', {rate: 1.01})
+            showToast('Klaar, je hebt ze allemaal')
+            // korte pauze en opnieuw
+            setTimeout(reset, 1300)
+          }
+        }else{
+          // fout
+          speak(`Niet dat getal, zoek ${state.target}`, {rate: 1.0})
+          showToast(`Zoek ${state.target}`)
+        }
+      }
+
+      // Badge tekst bijwerken
+      function updateBadge(){
+        document.querySelector('.badge').textContent = `Tik ${state.target}, daarna verder omhoog`
+      }
+
+      // Spraak
+      function loadVoices(){
+        return new Promise(resolve => {
+          let voices = speechSynthesis.getVoices()
+          if(voices.length){
+            resolve(voices)
+          }else{
+            speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices())
+          }
+        })
+      }
+
+      function pickDutchVoice(voices){
+        // voorkeurslijst voor iOS, macOS, Android, Windows
+        const prefer = [
+          v => v.lang && v.lang.toLowerCase().startsWith('nl'),
+          v => v.name && /dutch|nederlands/i.test(v.name),
+        ]
+        for(const test of prefer){
+          const found = voices.find(test)
+          if(found) return found
+        }
+        return voices[0] || null
+      }
+
+      function speak(text, opts = {}){
+        try{
+          speechSynthesis.cancel()
+          const ut = new SpeechSynthesisUtterance(text)
+          ut.lang = 'nl-NL'
+          ut.rate = opts.rate || 1.0
+          ut.pitch = 1.0
+          ut.volume = 1.0
+          if(state.voice) ut.voice = state.voice
+          speechSynthesis.speak(ut)
+        }catch(e){}
+      }
+
+      function showToast(msg){
+        toast.textContent = msg
+        toast.classList.add('show')
+        clearTimeout(showToast._t)
+        showToast._t = setTimeout(() => toast.classList.remove('show'), 1200)
+      }
+
+      async function start(){
+        await enterFullscreen()
+        resize()
+        // iOS audio en voices na user gesture
+        const voices = await loadVoices()
+        state.voice = pickDutchVoice(voices)
+
+        state.target = 1
+        updateBadge()
+        createBubbles()
+        state.running = true
+        state.lastTime = 0
+        cancelAnimationFrame(state.rafId)
+        state.rafId = requestAnimationFrame(tick)
+
+        startOverlay.classList.add('hidden')
+        // openingszin
+        speak('Zoek nummer 1 en tik erop', {rate: 1.02})
+        showToast('Zoek 1')
+      }
+
+      function reset(){
+        state.target = 1
+        updateBadge()
+        createBubbles()
+        showToast('Opnieuw gestart')
+        speak('We beginnen opnieuw, zoek nummer 1', {rate: 1.02})
+      }
+
+      // Knoppen
+      startBtn.addEventListener('click', start)
+      speakBtn.addEventListener('click', () => {
+        if(state.target <= state.count){
+          speak(`Zoek ${state.target}`, {rate: 1.02})
+          showToast(`Zoek ${state.target}`)
+        }else{
+          speak('Klaar', {rate: 1.02})
+        }
+      })
+      resetBtn.addEventListener('click', reset)
+
+      // Eerste layout
+      resize()
+
+      // Voorkom scroll bounce op iOS
+      document.addEventListener('touchmove', e => { e.preventDefault() }, {passive:false})
+    })()
+  </script>
 </body>
 </html>
