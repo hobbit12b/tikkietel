@@ -51,7 +51,7 @@
   #startOverlay .title{ font-size: clamp(22px, 3.8vmin, 30px); font-weight:1000 }
   #startOverlay .hint{ font-size: clamp(14px, 2.2vmin, 18px); opacity:.9 }
 
-  /* Bubbels, grote cijfers met subtiele glow */
+  /* Bubbels */
   .bubble{
     position:absolute; display:grid; place-items:center; border-radius:9999px;
     font-weight:1000; font-size: clamp(38px, 6.6vmin, 64px); color:#0b1020;
@@ -152,15 +152,13 @@
       <div class="row"><label for="maxWave">Maximaal cijfer</label><input id="maxWave" type="number" min="3" max="20" step="1" /></div>
       <div class="row"><label for="delay">Tijd tussen levels, seconden</label><input id="delay" type="number" min="0" max="5" step="0.5" /></div>
       <div class="row"><label>Snelheid bubbels</label><input id="minSpeed" type="range" min="4" max="40" step="1" /><input id="maxSpeed" type="range" min="6" max="50" step="1" /></div>
-
       <div class="row" style="align-items:flex-start">
         <label>Bekijk log</label>
         <div>
           <button id="previewBtn" type="button" style="padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background: rgba(0,0,0,.06); font-weight:900; cursor:pointer">Open</button>
-          <div style="font-size:12px; opacity:.8; margin-top:6px">Log toont alleen fouten, velden level en “wist niet”</div>
+          <div style="font-size:12px; opacity:.8; margin-top:6px">Log toont alleen fouten, velden tijd, level, wist niet, koos</div>
         </div>
       </div>
-
       <div class="actions"><button id="saveTeacher" type="button">Bewaar</button><button id="closeTeacher" type="button">Sluit</button></div>
     </div>
   </div>
@@ -212,26 +210,23 @@
     minSize: 110,
     maxSize: 190,
     interLevelDelay: 0.5,
-    logging: true,
     idleMs: 5000,
     lastInteraction: 0,
     voicePrimed: false
   }
 
+  /* ---------- util ---------- */
   function clampNum(v,a,b){ return Math.max(a, Math.min(b, v)) }
   function clampInt(v,a,b){ return Math.max(a, Math.min(b, v|0)) }
   function rand(min,max){ return Math.random() * (max - min) + min }
-
-  function setPastelForWave(wave){
-    const pair = PASTELS[(wave - 1) % PASTELS.length]
-    document.documentElement.style.setProperty('--bg1', pair[0])
-    document.documentElement.style.setProperty('--bg2', pair[1])
+  function setPastelForWave(w){
+    const p = PASTELS[(w - 1) % PASTELS.length]
+    document.documentElement.style.setProperty('--bg1', p[0])
+    document.documentElement.style.setProperty('--bg2', p[1])
   }
-
   function resize(){ app.style.width = innerWidth + 'px'; app.style.height = innerHeight + 'px' }
   addEventListener('resize', resize, {passive:true})
   addEventListener('orientationchange', () => setTimeout(resize, 250))
-
   function showToast(msg){
     toast.textContent = msg
     toast.classList.add('show')
@@ -239,13 +234,29 @@
     showToast._t = setTimeout(() => toast.classList.remove('show'), 1100)
   }
 
-  // Spraak, met iPad prime
-  function loadVoices(){
-    return new Promise(resolve => {
-      const v = speechSynthesis.getVoices()
-      if(v.length) resolve(v)
-      else speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices())
-    })
+  /* ---------- spraak, direct werkend op iPad ---------- */
+  function isIOS(){
+    const ua = navigator.userAgent || navigator.vendor || window.opera || ""
+    const isIPad = /\b(iPad)\b/i.test(ua)
+    const isIPhone = /\b(iPhone)\b/i.test(ua)
+    const isIPod = /\b(iPod)\b/i.test(ua)
+    const isMacTouch = /\bMacintosh\b/i.test(ua) && "ontouchend" in window
+    return isIPad || isIPhone || isIPod || isMacTouch
+  }
+  let ttsReady = false
+  function primeVoice(){
+    try{
+      const u = new SpeechSynthesisUtterance(" ")
+      u.lang = "nl-NL"
+      u.volume = 0
+      speechSynthesis.speak(u)
+      ttsReady = true
+    }catch(e){}
+  }
+  async function ensureVoiceReady(){
+    if(ttsReady) return
+    primeVoice()
+    await new Promise(r => setTimeout(r, 0))
   }
   function isFemaleName(name=''){ return /(claire|saskia|ellen|lotte|femke|mila|maja|vrouw|female|woman)/i.test(name) }
   function pickDutchFemale(vs){
@@ -253,31 +264,29 @@
     const fem = nl.filter(v => isFemaleName(v.name))
     return fem[0] || nl[0] || vs.find(v => isFemaleName(v.name)) || vs[0] || null
   }
-  function word(n){ return NUM_WORDS_NL[n] || String(n) }
-
-  // Belangrijk voor iPad: prime in dezelfde klik
-  function primeVoiceImmediately(){
-    try{
-      const u = new SpeechSynthesisUtterance(' ')
-      u.lang = 'nl-NL'
-      u.volume = 0
-      speechSynthesis.speak(u)
-      state.voicePrimed = true
-    }catch(e){}
+  function loadVoices(){
+    return new Promise(resolve => {
+      const v = speechSynthesis.getVoices()
+      if(v.length) resolve(v)
+      else speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices())
+    })
   }
-  function speak(text, rate=1.10){
+  function speak(text, rate = 1.10){
     try{
-      // geen cancel direct voor prime, wel voor normale spraak
-      speechSynthesis.cancel()
+      if(!ttsReady) primeVoice()
       const u = new SpeechSynthesisUtterance(text)
-      u.lang = 'nl-NL'
+      u.lang = "nl-NL"
       u.rate = rate
       if(state.voice) u.voice = state.voice
+      if(!isIOS()) speechSynthesis.cancel()   /* op iOS geen cancel direct voor speak */
       speechSynthesis.speak(u)
     }catch(e){}
   }
+  ;["pointerdown","touchstart","click"].forEach(ev => {
+    window.addEventListener(ev, () => { if(!ttsReady) primeVoice() }, { once:true, passive:true })
+  })
 
-  // Settings
+  /* ---------- settings ---------- */
   function loadSettings(){
     try{
       const raw = localStorage.getItem(SETTINGS_KEY)
@@ -306,9 +315,10 @@
     showToast('Instellingen bewaard')
   }
 
-  // Logging van alleen fouten, zonder tijdstempel
-  function logError(level, need){
-    const entry = { level, 'wist niet': need }
+  /* ---------- log alleen fouten, met tijd en koos ---------- */
+  function logError(level, need, chose){
+    const tijd = new Date().toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+    const entry = { tijd, level, 'wist niet': need, koos: chose }
     try{
       const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
       arr.push(entry)
@@ -316,15 +326,19 @@
     }catch(e){}
   }
   function previewLog(){
-    const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
-    const pretty = arr.length ? JSON.stringify(arr, null, 2) : '[]'
-    const safe = pretty.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))
-    const html = `<pre style="white-space:pre-wrap;padding:16px;font:14px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;">${safe}</pre>`
-    const w = window.open('', '_blank')
-    if(w){ w.document.write(`<title>Foutenlog</title>${html}`); w.document.close() } else { alert('Kan geen venster openen, mogelijk blokkeert je browser dit') }
+    try{
+      const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
+      const pretty = arr.length ? JSON.stringify(arr, null, 2) : '[]'
+      const safe = pretty.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))
+      const html = `<pre style="white-space:pre-wrap;padding:16px;font:14px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;">${safe}</pre>`
+      const w = window.open('', '_blank')
+      if(w){ w.document.write(`<title>Foutenlog</title>${html}`); w.document.close() } else { alert('Kan geen venster openen, mogelijk blokkeert je browser dit') }
+    }catch(e){
+      alert('Kon het log niet lezen')
+    }
   }
 
-  // Helperhand
+  /* ---------- helperhand ---------- */
   function hideHelper(){ helper.classList.remove('show') }
   function maybeShowHelper(){
     const now = performance.now()
@@ -343,7 +357,7 @@
   function registerInteraction(){ state.lastInteraction = performance.now(); hideHelper() }
   document.addEventListener('pointerdown', registerInteraction, {passive:true})
 
-  // Bubbels
+  /* ---------- bubbels ---------- */
   function clearBubbles(){
     for(const b of state.bubbles){ b.removeEventListener('pointerdown', onBubbleTap); b.remove() }
     state.bubbles = []; state.velocities = []; state.jerkMeta.clear()
@@ -360,7 +374,6 @@
     }
     return false
   }
-
   function createWaveBubbles(){
     clearBubbles()
     const W = app.clientWidth, H = app.clientHeight, pad = 16
@@ -390,7 +403,6 @@
     }
     enforceStacking()
   }
-
   function enforceStacking(){
     let minN = Infinity
     for(const b of state.bubbles){ const n = parseInt(b.dataset.num,10); if(n < minN) minN = n }
@@ -399,7 +411,7 @@
     if(minB){ const x = parseFloat(minB.dataset.x), y = parseFloat(minB.dataset.y); minB.style.transform = `translate3d(${x}px, ${y}px, 1px)`; setTimeout(() => setTransform(minB, x, y), 0) }
   }
 
-  // Effecten
+  /* ---------- effecten ---------- */
   function burst(x,y,baseSize){
     const ring = document.createElement('div'); ring.className = 'ring'
     const r = Math.max(30, baseSize * 0.55)
@@ -415,7 +427,7 @@
     }
   }
 
-  // Kliklogica, volgorde afdwingen
+  /* ---------- kliklogica, volgorde enforced ---------- */
   function onBubbleTap(e){
     const el = e.currentTarget
     const n = parseInt(el.dataset.num, 10)
@@ -424,15 +436,14 @@
     const correct = n === state.requiredNext
 
     if(!correct){
-      // log alleen de fout met gewenste velden
-      logError(state.wave, state.requiredNext)
-      speak('Oeps, begin opnieuw bij één', 1.04)
+      logError(state.wave, state.requiredNext, n)      /* log met tijd en koos */
+      ensureVoiceReady().then(() => speak('Oeps, begin opnieuw bij één', 1.04))
       showToast('Fout, begin opnieuw bij 1')
       restartCurrentWaveWithoutTeleport()
       return
     }
 
-    speak(word(n), 1.10)
+    ensureVoiceReady().then(() => speak(NUM_WORDS_NL[n] || String(n), 1.10))
     const rect = el.getBoundingClientRect()
     burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
 
@@ -450,7 +461,7 @@
     }, {once:true})
   }
 
-  // Fout, bestaande bellen blijven, ontbrekende schuiven in
+  /* ---------- fout afhandeling, geen teleport ---------- */
   function restartCurrentWaveWithoutTeleport(){
     const have = new Set(state.bubbles.map(b => parseInt(b.dataset.num,10)))
     state.requiredNext = 1
@@ -505,17 +516,17 @@
     state.lastInteraction = performance.now()
   }
 
-  // Volgende level
+  /* ---------- volgende level ---------- */
   function nextWave(){
     setPastelForWave(state.wave + 1)
     state.wave += 1
     if(state.wave > state.maxWave){
       state.wave = 1
+      ensureVoiceReady().then(() => speak('We beginnen opnieuw bij één', 1.02))
       showToast('We beginnen opnieuw bij 1')
-      speak('We beginnen opnieuw bij één', 1.02)
     }else{
+      ensureVoiceReady().then(() => speak(`Nu tot en met ${NUM_WORDS_NL[state.wave] || state.wave}`, 1.02))
       showToast(`Nu tot en met ${state.wave}`)
-      speak(`Nu tot en met ${word(state.wave)}`, 1.02)
     }
     state.moving = state.wave >= 2
     state.requiredNext = 1
@@ -524,7 +535,7 @@
     state.lastInteraction = performance.now()
   }
 
-  // Animatie, doelcijfer beweegt schokkerig
+  /* ---------- animatie, doelcijfer schokkerig ---------- */
   function tick(ts){
     maybeShowHelper()
     if(!state.moving){ state.lastTime = ts; state.runningRAF = requestAnimationFrame(tick); return }
@@ -561,21 +572,16 @@
     state.runningRAF = requestAnimationFrame(tick)
   }
 
-  // Fullscreen
+  /* ---------- fullscreen en start ---------- */
   async function enterFullscreen(){
     const el = document.documentElement
     try{ if(el.requestFullscreen) await el.requestFullscreen(); else if(el.webkitRequestFullscreen) await el.webkitRequestFullscreen() }catch(e){}
   }
-
-  // Start
   async function start(){
     await enterFullscreen()
     resize()
 
-    // iPad stem prime in dezelfde klik
-    primeVoiceImmediately()
-
-    // laad voices en kies vrouwelijk NL
+    primeVoice()                                        /* iPad prime in dezelfde klik */
     const voices = await loadVoices()
     state.voice = pickDutchFemale(voices)
 
@@ -583,7 +589,7 @@
     setPastelForWave(1); clearBubbles(); createWaveBubbles()
     badge.textContent = 'Tik het getal op volgorde'
     startOverlay.classList.add('hidden')
-    // nu direct hoorbaar
+    await ensureVoiceReady()
     speak('Tik één', 1.10)
     state.lastInteraction = performance.now()
 
@@ -593,7 +599,7 @@
   }
   function reset(){ start() }
 
-  // Leerkracht beveiliging met tafel van 4
+  /* ---------- leerkracht beveiliging met tafel van 4 ---------- */
   function openTeacherPanelSecure(){
     const a = 4
     const b = Math.floor(Math.random()*9)+1
@@ -608,16 +614,17 @@
     }
   }
 
-  // UI events
+  /* ---------- UI events ---------- */
   startBtn.addEventListener('click', start)
   resetBtn.addEventListener('click', reset)
-  speakBtn.addEventListener('click', () => {
-    speak(`Tik de cijfers op volgorde tot en met ${word(state.wave)}`, 1.06)
+  speakBtn.addEventListener('click', async () => {
+    await ensureVoiceReady()
+    speak(`Tik de cijfers op volgorde tot en met ${NUM_WORDS_NL[state.wave] || state.wave}`, 1.06)
   })
+  document.getElementById('previewBtn').addEventListener('click', previewLog)
   teacherBtn.addEventListener('click', openTeacherPanelSecure)
   closeTeacher.addEventListener('click', () => teacherPanel.classList.remove('show'))
   saveTeacher.addEventListener('click', () => { saveSettings(); teacherPanel.classList.remove('show') })
-  previewBtn.addEventListener('click', () => previewLog())
 
   ;['pointerdown','keydown','touchstart'].forEach(ev => document.addEventListener(ev, () => { state.lastInteraction = performance.now(); hideHelper() }, {passive:true}))
   resize()
