@@ -6,15 +6,11 @@
 <title>Kleuter Cijfer Pop</title>
 <style>
   :root{
-    /* pastel achtergrond, per level wisselend in JS */
     --bg1: #f3f1ff;
     --bg2: #eaf7ff;
 
-    /* UI kleuren */
     --ink: #0b1020;
-    --ink-soft: rgba(0,0,0,.08);
 
-    /* bubbel glans en glow */
     --bubble-hl: #ffffff;
     --bubble-mid: #eff9ff;
     --bubble-lo: #d6f0ff;
@@ -32,7 +28,6 @@
     touch-action: none;
   }
 
-  /* Canvas en parallax lagen */
   #app{
     position:fixed;
     inset:0;
@@ -42,6 +37,8 @@
     background: radial-gradient(120% 120% at 70% 20%, var(--bg1) 0%, var(--bg2) 60%, #ffffff 100%);
     transition: background .6s ease;
   }
+
+  /* Zachte parallax vlekken */
   .parallax{
     position:absolute;
     inset:-10% -10% -10% -10%;
@@ -54,7 +51,7 @@
     width: 35vmax;
     height: 35vmax;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.7), rgba(255,255,255,0));
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.65), rgba(255,255,255,0));
     animation: float 38s linear infinite;
     mix-blend-mode: screen;
   }
@@ -66,7 +63,7 @@
     100%{ transform: translate3d(-10%, -10%, 0) }
   }
 
-  /* Bovenbalk met grote ronde knoppen */
+  /* Bovenbalk */
   .ui{
     position:absolute;
     left:0;
@@ -88,6 +85,7 @@
     letter-spacing: .2px;
   }
   .controls{ display:flex; gap:10px }
+
   .iconbtn{
     display:flex;
     align-items:center;
@@ -103,6 +101,20 @@
     cursor:pointer;
   }
   .iconbtn svg{ width: 22px; height: 22px; flex: 0 0 auto }
+
+  /* Nieuwe ronde resetknop, rond en compact */
+  .roundbtn{
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    display:grid;
+    place-items:center;
+    border: 0;
+    background: radial-gradient(circle at 30% 30%, #ffffff, #e9f3ff 70%);
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9);
+    cursor:pointer;
+  }
+  .roundbtn svg{ width: 22px; height: 22px }
 
   /* Start overlay */
   #startOverlay{
@@ -122,14 +134,14 @@
   #startOverlay .title{ font-size: clamp(22px, 3.8vmin, 30px); font-weight: 1000 }
   #startOverlay .hint{ font-size: clamp(14px, 2.2vmin, 18px); opacity:.9 }
 
-  /* Bubbels, nummers groter en met glow */
+  /* Bubbels, groot met subtiele glow */
   .bubble{
     position:absolute;
     display:grid;
     place-items:center;
     border-radius: 9999px;
     font-weight: 1000;
-    font-size: clamp(34px, 6vmin, 56px); /* groter */
+    font-size: clamp(38px, 6.6vmin, 64px); /* groter cijfer */
     color: #0b1020;
     background: radial-gradient(140% 140% at 30% 25%, var(--bubble-hl) 0%, var(--bubble-mid) 40%, var(--bubble-lo) 100%);
     border: 2px solid rgba(255,255,255,.9);
@@ -142,7 +154,6 @@
     user-select:none; -webkit-user-select:none;
     transition: transform .16s ease;
   }
-  /* subtiele white radial glow achter de bubbel */
   .bubble::before{
     content:"";
     position:absolute;
@@ -166,7 +177,7 @@
     pointer-events:none;
   }
 
-  /* Speelse pop met ring en confetti */
+  /* Pop animatie en confetti */
   .pop{ animation: pop .33s cubic-bezier(.2,.9,.2,1) forwards }
   @keyframes pop{
     0%{ transform: var(--t) scale(1) rotate(0deg); opacity:1 }
@@ -194,7 +205,7 @@
   }
   @keyframes dot{ to{ transform: translate(var(--dx), var(--dy)) scale(.8); opacity:0 } }
 
-  /* Helperhand die zacht wijst naar het kleinste cijfer */
+  /* Helperhand */
   .helper{
     position:absolute;
     width: 64px;
@@ -205,16 +216,10 @@
     transition: opacity .25s ease;
   }
   .helper.show{ opacity: .9 }
-  .helper .hand{
-    width:100%; height:100%;
-    animation: nod 1.2s ease-in-out infinite;
-  }
-  @keyframes nod{
-    0%,100%{ transform: translateY(0) rotate(0deg) }
-    50%{ transform: translateY(6px) rotate(2deg) }
-  }
+  .helper .hand{ width:100%; height:100%; animation: nod 1.2s ease-in-out infinite }
+  @keyframes nod{ 0%,100%{ transform: translateY(0) rotate(0deg) } 50%{ transform: translateY(6px) rotate(2deg) } }
 
-  /* Toast onderin */
+  /* Toast */
   #toast{
     position:absolute;
     left:50%;
@@ -233,7 +238,7 @@
   }
   #toast.show{ opacity:1 }
 
-  /* Leerkracht modus, paneel */
+  /* Leerkracht */
   .teacher-toggle{
     position:absolute;
     left: 12px;
@@ -254,7 +259,7 @@
     left: 12px;
     bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     width: min(92vw, 420px);
-    background: rgba(255,255,255,.9);
+    background: rgba(255,255,255,.95);
     border: 1px solid rgba(0,0,0,.08);
     border-radius: 16px;
     box-shadow: 0 10px 28px rgba(0,0,0,.12);
@@ -272,33 +277,30 @@
 </style>
 </head>
 <body>
-  <div id="app" aria-label="Kleuter Cijfer Pop" role="application">
-    <!-- Parallax zachte vlekken -->
+  <div id="app" role="application" aria-label="Kleuter Cijfer Pop">
+    <!-- Parallax -->
     <div class="parallax" aria-hidden="true">
       <div class="blob" style="left:-8%; top:-6%"></div>
       <div class="blob b2" style="right:-6%; top:10%"></div>
       <div class="blob b3" style="left:20%; bottom:-12%"></div>
     </div>
 
-    <!-- UI balk -->
+    <!-- UI -->
     <div class="ui">
       <div class="badge" id="badge">Tik het getal dat je ziet</div>
       <div class="controls">
         <button class="iconbtn" id="speakBtn" type="button" aria-label="Lees voor">
-          <!-- oor icoon -->
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 18c0 2 1.5 3 3 3s3-1 3-3c0-3 3-3 3-7a6 6 0 0 0-12 0"/>
             <path d="M9 9a3 3 0 0 1 6 0"/>
           </svg>
           Lees voor
         </button>
-        <button class="iconbtn" id="resetBtn" type="button" aria-label="Opnieuw">
-          <!-- ronde pijl -->
+        <button class="roundbtn" id="resetBtn" type="button" aria-label="Opnieuw">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 12a9 9 0 1 0 9-9"/>
             <path d="M3 4v8h8"/>
           </svg>
-          Opnieuw
         </button>
       </div>
     </div>
@@ -316,18 +318,18 @@
     <!-- Start overlay -->
     <div id="startOverlay" aria-modal="true" role="dialog">
       <div class="title">Klaar voor het spel</div>
-      <div class="hint">Tik op Start, je ziet eerst alleen 1, daarna komen er steeds meer</div>
-      <button class="iconbtn" id="startBtn" type="button">
-        ▶ Start
-      </button>
+      <div class="hint">Je ziet eerst alleen 1, daarna komen er steeds meer, klik ze op volgorde</div>
+      <button class="iconbtn" id="startBtn" type="button">▶ Start</button>
     </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
 
-    <!-- Leerkracht modus -->
+    <!-- Leerkracht -->
     <div class="teacher-toggle">
       <button class="chip" id="teacherBtn" type="button">Leerkracht</button>
-      <button class="chip" id="exportBtn" type="button">Exporteer log</button>
+      <button class="chip" id="exportBtn" type="button">Exporteer JSON</button>
+      <button class="chip" id="exportCsvBtn" type="button">Exporteer CSV</button>
+      <button class="chip" id="previewBtn" type="button">Bekijk log</button>
     </div>
     <div class="panel" id="teacherPanel" role="dialog" aria-label="Leerkracht instellingen">
       <h3>Instellingen</h3>
@@ -369,6 +371,8 @@
 
   const teacherBtn = document.getElementById('teacherBtn')
   const exportBtn = document.getElementById('exportBtn')
+  const exportCsvBtn = document.getElementById('exportCsvBtn')
+  const previewBtn = document.getElementById('previewBtn')
   const teacherPanel = document.getElementById('teacherPanel')
   const saveTeacher = document.getElementById('saveTeacher')
   const closeTeacher = document.getElementById('closeTeacher')
@@ -378,7 +382,6 @@
   const inputMaxSpeed = document.getElementById('maxSpeed')
   const inputLogging = document.getElementById('logging')
 
-  // Pastels per level
   const PASTELS = [
     ['#fde2e4', '#fff1f1'],
     ['#dfe7fd', '#eef3ff'],
@@ -403,9 +406,11 @@
   const state = {
     moving: false,
     wave: 1,
+    requiredNext: 1,          // verplicht chronologisch
     maxWave: 10,
     bubbles: [],
     velocities: [],
+    jerkMeta: new Map(),      // per bubbel: volgende jerk wissel
     runningRAF: 0,
     lastTime: 0,
     voice: null,
@@ -413,13 +418,12 @@
     maxSpeed: 22,
     minSize: 110,
     maxSize: 190,
-    interLevelDelay: 0.5,   // seconden
+    interLevelDelay: 0.5,
     logging: false,
-    idleMs: 5000,           // helper verschijnt na 5 s geen interactie
+    idleMs: 5000,
     lastInteraction: 0
   }
 
-  // Settings laden, paneel vullen
   function loadSettings(){
     try{
       const raw = localStorage.getItem(SETTINGS_KEY)
@@ -478,7 +482,7 @@
     showToast._t = setTimeout(() => toast.classList.remove('show'), 1100)
   }
 
-  // Spraak, voorkeur voor Nederlandse vrouwenstem, extra snel na tik
+  // Spraak
   function loadVoices(){
     return new Promise(resolve => {
       const v = speechSynthesis.getVoices()
@@ -486,9 +490,7 @@
       else speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices())
     })
   }
-  function isFemaleName(name=''){
-    return /(claire|saskia|ellen|lotte|femke|mila|maja|vrouw|female|woman)/i.test(name)
-  }
+  function isFemaleName(name=''){ return /(claire|saskia|ellen|lotte|femke|mila|maja|vrouw|female|woman)/i.test(name) }
   function pickDutchFemale(voices){
     const nl = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('nl'))
     const females = nl.filter(v => isFemaleName(v.name))
@@ -499,9 +501,8 @@
     return voices[0] || null
   }
   function word(n){ return NUM_WORDS_NL[n] || String(n) }
-  function speak(text, rate=1.06){
+  function speak(text, rate=1.10){
     try{
-      // meteen spreken, geen wachttijd
       speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(text)
       u.lang = 'nl-NL'
@@ -514,31 +515,59 @@
   // Logging
   function logEvent(type, data){
     if(!state.logging) return
-    const entry = {
-      t: Date.now(),
-      wave: state.wave,
-      type,
-      ...data
-    }
+    const entry = { t: Date.now(), wave: state.wave, need: state.requiredNext, type, ...data }
     try{
       const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
       arr.push(entry)
       localStorage.setItem(LOG_KEY, JSON.stringify(arr))
     }catch(e){}
   }
-  function exportLog(){
-    try{
-      const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
-      const blob = new Blob([JSON.stringify(arr, null, 2)], {type:'application/json'})
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'cijferpop-log.json'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    }catch(e){}
+  function exportJSON(){
+    const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
+    const pretty = JSON.stringify(arr, null, 2)
+    const blob = new Blob([pretty], {type:'application/json'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'cijferpop-log.json'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+  function exportCSV(){
+    const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
+    const header = ['timestamp','wave','need','type','n','correct'].join(',')
+    const lines = arr.map(x => [
+      new Date(x.t).toISOString(),
+      x.wave ?? '',
+      x.need ?? '',
+      x.type ?? '',
+      x.n ?? '',
+      x.correct ?? ''
+    ].join(','))
+    const content = [header].concat(lines).join('\n')
+    const blob = new Blob([content], {type:'text/csv'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'cijferpop-log.csv'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+  function previewLog(){
+    const arr = JSON.parse(localStorage.getItem(LOG_KEY) || '[]')
+    const pretty = arr.length ? JSON.stringify(arr, null, 2) : '[]'
+    const html = `<pre style="white-space:pre-wrap;padding:16px;font:14px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;">${pretty.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</pre>`
+    const w = window.open('', '_blank')
+    if(w){
+      w.document.write(`<title>Log weergave</title>${html}`)
+      w.document.close()
+    }else{
+      alert('Kan geen venster openen, blokkeert je browser het')
+    }
   }
 
   // Helperhand
@@ -546,7 +575,6 @@
   function maybeShowHelper(){
     const now = performance.now()
     if(now - state.lastInteraction < state.idleMs) return
-    // wijs naar het kleinste resterende cijfer
     let minB = null, minN = Infinity
     for(const b of state.bubbles){
       const n = parseInt(b.dataset.num,10)
@@ -560,11 +588,8 @@
     helper.style.top = y + 'px'
     helper.classList.add('show')
   }
-  function touchRegistered(){ 
-    state.lastInteraction = performance.now()
-    hideHelper()
-  }
-  document.addEventListener('pointerdown', touchRegistered, {passive:true})
+  function registerInteraction(){ state.lastInteraction = performance.now(); hideHelper() }
+  document.addEventListener('pointerdown', registerInteraction, {passive:true})
 
   // Bubbels
   function clearBubbles(){
@@ -574,6 +599,7 @@
     }
     state.bubbles = []
     state.velocities = []
+    state.jerkMeta.clear()
   }
 
   function createWaveBubbles(){
@@ -587,14 +613,12 @@
       el.textContent = n
       el.dataset.num = n
 
-      // grotere, willekeurige maat
-      const baseMin = Math.max(state.minSize, Math.min(innerWidth, innerHeight) * 0.14)
-      const baseMax = Math.max(state.maxSize, Math.min(innerWidth, innerHeight) * 0.24)
+      const baseMin = Math.max(110, Math.min(innerWidth, innerHeight) * 0.16)
+      const baseMax = Math.max(190, Math.min(innerWidth, innerHeight) * 0.26)
       const size = Math.floor(rand(baseMin, baseMax))
       el.style.width = size + 'px'
       el.style.height = size + 'px'
 
-      // laagste cijfer bovenop
       el.style.zIndex = String(1000 - n)
 
       let x = rand(pad, Math.max(pad, W - size))
@@ -621,6 +645,9 @@
       app.appendChild(el)
       state.bubbles.push(el)
       state.velocities.push(v)
+
+      // jerk meta, voor het doelcijfer wisselen we vaker
+      state.jerkMeta.set(el, { nextJerk: performance.now() + rand(300, 800) })
     }
     enforceStacking()
   }
@@ -686,20 +713,27 @@
     }
   }
 
-  // Interactie
+  // Interactie, verplicht op volgorde
   function onBubbleTap(e){
     const el = e.currentTarget
     const n = parseInt(el.dataset.num, 10)
     if(!state.bubbles.includes(el)) return
 
-    // logging: was dit het laagste resterende
-    const minRemaining = Math.min(...state.bubbles.map(b => parseInt(b.dataset.num,10)))
-    const correct = n === minRemaining
+    const correctNeeded = state.requiredNext
+    const correct = n === correctNeeded
+
     logEvent('tap', { n, correct })
 
-    // stem extra snel na klik
-    speak(word(n), 1.10)
+    if(!correct){
+      // fout, alles van dit level komt terug, je begint weer bij 1
+      speak('Oeps, begin opnieuw bij één', 1.04)
+      showToast('Begin opnieuw bij 1')
+      recreateCurrentWave()
+      return
+    }
 
+    // goed, spreek en pop
+    speak(word(n), 1.10)
     const rect = el.getBoundingClientRect()
     burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
 
@@ -711,12 +745,25 @@
         state.velocities.splice(idx, 1)
       }
       el.remove()
+
+      state.requiredNext += 1
+
       if(state.bubbles.length === 0){
         setTimeout(nextWave, state.interLevelDelay * 1000)
       }else{
         enforceStacking()
       }
     }, {once:true})
+  }
+
+  // Foutlogica, zet level terug naar complete set en reset volgorde
+  function recreateCurrentWave(){
+    // dezelfde wave, weer 1..wave zichtbaar
+    state.requiredNext = 1
+    createWaveBubbles()
+    badge.textContent = `Tik de cijfers op volgorde, begin met 1`
+    logEvent('restart-wave', {})
+    state.lastInteraction = performance.now()
   }
 
   // Volgende level
@@ -734,14 +781,14 @@
       logEvent('next-wave', { wave: state.wave })
     }
     state.moving = state.wave >= 2
+    state.requiredNext = 1
     createWaveBubbles()
-    badge.textContent = `Tik de cijfers weg tot en met ${state.wave}`
+    badge.textContent = `Tik de cijfers op volgorde tot en met ${state.wave}`
     state.lastInteraction = performance.now()
   }
 
-  // Animatie loop
+  // Animatie, doelcijfer beweegt schokkeriger
   function tick(ts){
-    // helper tonen bij inactiviteit
     maybeShowHelper()
 
     if(!state.moving){
@@ -763,10 +810,28 @@
       let y = parseFloat(el.dataset.y)
       const s = parseFloat(el.dataset.size)
 
+      const n = parseInt(el.dataset.num, 10)
+      const isTarget = n === state.requiredNext
+
+      if(isTarget){
+        // schokkerig, wissel richting vaker en voeg mini jitter toe
+        const meta = state.jerkMeta.get(el)
+        const now = performance.now()
+        if(meta && now >= meta.nextJerk){
+          const sp = rand(state.minSpeed*0.8, state.maxSpeed*1.1)
+          const angle = rand(0, Math.PI*2)
+          v.vx = Math.cos(angle)*sp
+          v.vy = Math.sin(angle)*sp
+          meta.nextJerk = now + rand(220, 600)
+        }
+        // kleine jitter
+        v.vx += rand(-5, 5) * dt
+        v.vy += rand(-5, 5) * dt
+      }
+
       x += v.vx * dt
       y += v.vy * dt
 
-      // zachte botsing
       if(x <= 0){ x = 0; v.vx = Math.abs(v.vx)*0.98 }
       if(y <= 0){ y = 0; v.vy = Math.abs(v.vy)*0.98 }
       if(x + s >= W){ x = W - s; v.vx = -Math.abs(v.vx)*0.98 }
@@ -778,7 +843,6 @@
       el.style.transform = `translate3d(${x}px, ${y}px, 0)`
     }
 
-    // af en toe stapeling herbevestigen
     if(Math.floor(performance.now()/1000)%2===0){
       enforceStacking()
     }
@@ -794,6 +858,7 @@
       else if(el.webkitRequestFullscreen) await el.webkitRequestFullscreen()
     }catch(e){}
   }
+
   async function start(){
     await enterFullscreen()
     resize()
@@ -802,6 +867,7 @@
     state.voice = pickDutchFemale(voices)
 
     state.wave = 1
+    state.requiredNext = 1
     state.moving = false
     setPastelForWave(1)
     clearBubbles()
@@ -809,12 +875,14 @@
     badge.textContent = 'Tik het getal dat je ziet'
     startOverlay.classList.add('hidden')
     showToast('Tik 1')
-    speak('Tik één', 1.06)
+    speak('Tik één', 1.10)
     state.lastInteraction = performance.now()
 
     cancelAnimationFrame(state.runningRAF)
     state.lastTime = 0
     state.runningRAF = requestAnimationFrame(tick)
+
+    logEvent('start', {})
   }
   function reset(){
     logEvent('reset', {})
@@ -826,10 +894,10 @@
   resetBtn.addEventListener('click', reset)
   speakBtn.addEventListener('click', () => {
     if(state.bubbles.length === 1 && state.wave === 1){
-      speak('Tik één', 1.06)
+      speak('Tik één', 1.10)
       showToast('Tik 1')
     }else{
-      speak(`Tik de cijfers weg tot en met ${word(state.wave)}`, 1.06)
+      speak(`Tik de cijfers op volgorde tot en met ${word(state.wave)}`, 1.08)
     }
   })
 
@@ -839,14 +907,14 @@
   })
   closeTeacher.addEventListener('click', () => teacherPanel.classList.remove('show'))
   saveTeacher.addEventListener('click', () => { saveSettings(); teacherPanel.classList.remove('show') })
-  exportBtn.addEventListener('click', exportLog)
+  exportBtn.addEventListener('click', exportJSON)
+  exportCsvBtn.addEventListener('click', exportCSV)
+  previewBtn.addEventListener('click', previewLog)
 
-  // Inactief timer reset bij bewegingen en klikken
   ;['pointerdown','keydown','touchstart'].forEach(ev => {
     document.addEventListener(ev, () => { state.lastInteraction = performance.now(); hideHelper() }, {passive:true})
   })
 
-  // Eerste layout en scrollpreventie
   resize()
   document.addEventListener('touchmove', e => e.preventDefault(), {passive:false})
 })();
