@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counting Dots Spel</title>
+
+    <style>
+        /* --- CSS Gedeelte --- */
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        #game-container {
+            width: 90vw;
+            max-width: 600px;
+            height: 60vh;
+            max-height: 400px;
+            border: 3px solid #ccc;
+            border-radius: 10px;
+            position: relative; /* Noodzakelijk voor het positioneren van de stippen */
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .dot {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%; /* Maakt de div een cirkel */
+            position: absolute; /* Om vrij te kunnen plaatsen */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.3s;
+            user-select: none; /* Voorkomt dat de tekst geselecteerd kan worden */
+        }
+
+        .dot:hover {
+            transform: scale(1.1);
+        }
+
+        .correct {
+            opacity: 0.4;
+            border: 3px solid #2ecc71;
+            pointer-events: none; /* Maakt de stip niet meer klikbaar */
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        #next-level-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        #next-level-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Counting Dots 🔵🔊</h1>
+    <p id="instructions">Klik de stippen in de juiste volgorde, van 1 tot ...</p>
+
+    <div id="game-container">
+        </div>
+
+    <button id="next-level-btn" class="hidden">Volgend Level!</button>
+
+    <script>
+        /* --- JavaScript Gedeelte --- */
+        
+        // DOM-elementen ophalen
+        const gameContainer = document.getElementById('game-container');
+        const instructions = document.getElementById('instructions');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+
+        // Spelvariabelen
+        let currentLevel = 1;
+        let nextNumberToClick = 1;
+        const DOT_SIZE = 50; // De grootte van een stip in pixels
+
+        // Een lijst met leuke kleurtjes voor de stippen
+        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c'];
+
+        // Event listener voor de "Volgend Level" knop
+        nextLevelBtn.addEventListener('click', () => {
+            currentLevel++;
+            setupLevel();
+        });
+        
+        /**
+         * Spreekt een getal uit in het Nederlands.
+         * @param {number} number Het getal dat uitgesproken moet worden.
+         */
+        function speakNumber(number) {
+            // Controleer of de browser spraaksynthese ondersteunt
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(number.toString());
+                utterance.lang = 'nl-NL'; // Stel de taal in op Nederlands
+                utterance.rate = 0.9;     // Iets langzamer voor duidelijkheid
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Functie om een nieuw level op te bouwen
+        function setupLevel() {
+            // Maak het speelveld leeg
+            gameContainer.innerHTML = '';
+            
+            // Reset de teller voor het klikken
+            nextNumberToClick = 1;
+
+            // Verberg de "Volgend Level" knop en update de instructies
+            nextLevelBtn.classList.add('hidden');
+            instructions.textContent = `Klik de stippen in de juiste volgorde, van 1 tot ${currentLevel}.`;
+
+            // Maak de stippen voor het huidige level aan
+            for (let i = 1; i <= currentLevel; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('dot');
+                dot.textContent = i;
+                dot.dataset.number = i; // Sla het nummer op in een data-attribuut
+
+                // Geef een willekeurige kleur
+                dot.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+                // Bepaal een willekeurige positie binnen het speelveld
+                const containerRect = gameContainer.getBoundingClientRect();
+                
+                // Zorg ervoor dat de stippen niet buiten het veld vallen
+                let x = Math.random() * (containerRect.width - DOT_SIZE);
+                let y = Math.random() * (containerRect.height - DOT_SIZE);
+                
+                dot.style.left = `${x}px`;
+                dot.style.top = `${y}px`;
+
+                // Voeg een event listener toe voor als er op de stip geklikt wordt
+                dot.addEventListener('click', handleDotClick);
+
+                // Voeg de stip toe aan het speelveld
+                gameContainer.appendChild(dot);
+            }
+        }
+
+        // Functie die wordt uitgevoerd als op een stip wordt geklikt
+        function handleDotClick(event) {
+            const clickedDot = event.target;
+            const clickedNumber = parseInt(clickedDot.dataset.number);
+
+            // Controleer of het de juiste stip is
+            if (clickedNumber === nextNumberToClick) {
+                // Juiste stip! Spreek het nummer uit.
+                speakNumber(clickedNumber);
+                
+                clickedDot.classList.add('correct');
+                nextNumberToClick++;
+
+                // Controleer of het level is voltooid
+                if (nextNumberToClick > currentLevel) {
+                    instructions.textContent = `Goed gedaan! Level ${currentLevel} voltooid! 🎉`;
+                    nextLevelBtn.classList.remove('hidden');
+                }
+            } else {
+                // Foute stip!
+                clickedDot.classList.add('shake');
+                // Verwijder de schud-animatie na een halve seconde, zodat het opnieuw kan gebeuren
+                setTimeout(() => {
+                    clickedDot.classList.remove('shake');
+                }, 500);
+            }
+        }
+
+        // Start het eerste level als de pagina laadt
+        setupLevel();
+    </script>
+
+</body>
+</html>
