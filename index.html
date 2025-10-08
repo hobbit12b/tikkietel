@@ -35,11 +35,13 @@
   .badge{ padding:10px 14px; border-radius:9999px; background:rgba(0,0,0,.06); border:1px solid rgba(0,0,0,.05);
     font-weight:900; font-size:clamp(14px, 2.2vmin, 18px) }
 
-  /* Nieuwe beeldknoppen rechtsboven */
   .controls{ display:flex; gap:10px }
   .imgbtn{ width:48px; height:48px; border-radius:9999px; border:0; padding:0; background:#fff;
     box-shadow: 0 6px 16px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9); cursor:pointer; display:grid; place-items:center }
   .imgbtn img{ width:28px; height:28px; display:block }
+  .roundbtn{ width:48px; height:48px; border-radius:9999px; border:0; padding:0; background:#fff;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9); cursor:pointer; display:grid; place-items:center }
+  .roundbtn svg{ width:24px; height:24px }
 
   #startOverlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px;
     background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.7)); backdrop-filter: blur(4px); text-align:center }
@@ -119,6 +121,14 @@
         <button class="imgbtn" id="nogeensBtn" type="button" aria-label="Nog eens">
           <img src="nogeens.png" alt="Nog eens">
         </button>
+        <!-- Aan uit muziek -->
+        <button class="roundbtn" id="musicBtn" type="button" aria-label="Muziek aan of uit" title="Muziek">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -151,6 +161,7 @@
       <div class="row"><label for="delay">Tijd tussen levels, seconden</label><input id="delay" type="number" min="0" max="5" step="0.1" /></div>
       <div class="row"><label>Snelheid bubbels</label><input id="minSpeed" type="range" min="4" max="40" step="1" /><input id="maxSpeed" type="range" min="6" max="50" step="1" /></div>
       <div class="row"><label for="vol">Volume stem</label><input id="vol" type="range" min="0" max="1" step="0.05" /></div>
+      <div class="row"><label for="musicVol">Volume muziek</label><input id="musicVol" type="range" min="0" max="1" step="0.05" /></div>
 
       <div class="row" style="align-items:flex-start">
         <label>Bekijk log</label>
@@ -176,6 +187,9 @@
         <div id="logList" class="loglist">Geen fouten geregistreerd</div>
       </div>
     </div>
+
+    <!-- Achtergrondmuziek -->
+    <audio id="bgm" src="soft-ambient-textures-with-subtle-bird-chirps-377058.mp3" loop preload="auto"></audio>
   </div>
 
 <script>
@@ -185,6 +199,7 @@
   const startBtn = document.getElementById('startBtn')
   const vraagBtn = document.getElementById('vraagBtn')
   const nogeensBtn = document.getElementById('nogeensBtn')
+  const musicBtn = document.getElementById('musicBtn')
   const toast = document.getElementById('toast')
   const badge = document.getElementById('badge')
   const helper = document.getElementById('helper')
@@ -198,12 +213,15 @@
   const inputMinSpeed = document.getElementById('minSpeed')
   const inputMaxSpeed = document.getElementById('maxSpeed')
   const inputVol = document.getElementById('vol')
+  const inputMusicVol = document.getElementById('musicVol')
   const previewBtn = document.getElementById('previewBtn')
 
   const logOverlay = document.getElementById('logOverlay')
   const logList = document.getElementById('logList')
   const closeLogBtn = document.getElementById('closeLogBtn')
   const clearLogBtn = document.getElementById('clearLogBtn')
+
+  const bgm = document.getElementById('bgm')
 
   const PASTELS = [
     ['#fde2e4','#fff1f1'], ['#dfe7fd','#eef3ff'], ['#e4f1e1','#f2faef'],
@@ -215,14 +233,10 @@
   const SETTINGS_KEY = 'kleuter_cijferpop_settings'
   const LOG_KEY = 'kleuter_cijferpop_log'
 
-  // Veilige opslag met fallback
   const safeStore = (() => {
     let memory = {}
     let ok = true
-    try{
-      const t = '__test__' + Math.random()
-      localStorage.setItem(t,'1'); localStorage.removeItem(t)
-    }catch(e){ ok = false }
+    try{ const t='__test__'+Math.random(); localStorage.setItem(t,'1'); localStorage.removeItem(t) }catch(e){ ok=false }
     return {
       get(key, d='null'){ try{ if(ok) return localStorage.getItem(key) ?? d; return key in memory ? memory[key] : d }catch(e){ return d } },
       set(key, val){ try{ if(ok) localStorage.setItem(key,val); else memory[key]=val; return true }catch(e){ return false } }
@@ -246,14 +260,16 @@
     maxSpeed:22,
     minSize:110,
     maxSize:190,
-    interLevelDelay:1.8,           // langer wachten tussen levels
+    interLevelDelay:1.8,
     logging:true,
     idleMs:5000,
     lastInteraction:0,
-    voiceVolume:1.0,               // maximaal volume
-    friendlyRate:0.96,             // vriendelijker basis-snelheid
-    numberRate:0.98,               // net iets langzamer voor cijfers
-    friendlyPitch:1.15
+    voiceVolume:1.0,
+    friendlyRate:0.96,
+    numberRate:0.98,
+    friendlyPitch:1.15,
+    musicEnabled:true,
+    musicVolume:0.18
   }
 
   function clampNum(v,a,b){ return Math.max(a, Math.min(b, v)) }
@@ -277,7 +293,7 @@
     showToast._t = setTimeout(() => toast.classList.remove('show'), 1200)
   }
 
-  // TTS robuust en vriendelijk
+  // TTS
   function loadVoices(){
     return new Promise(resolve => {
       const got = speechSynthesis.getVoices()
@@ -301,7 +317,7 @@
     if(state.voicePrimed && state.voicesLoaded) return
     try{
       const u = new SpeechSynthesisUtterance('.')
-      u.lang = 'nl-NL'; u.volume = 0.01; u.rate = 1
+      u.lang='nl-NL'; u.volume=0.01; u.rate=1
       u.onend = () => { state.voicePrimed = true }
       speechSynthesis.speak(u)
     }catch(e){}
@@ -312,21 +328,48 @@
     }catch(e){}
   }
 
-  // nieuwer: niet altijd onderbreken, zodat cijfers sneller starten
   function speak(text, rate=state.friendlyRate, opts={interrupt:true}){
     try{
       if(opts.interrupt) speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(text)
-      u.lang = 'nl-NL'
-      u.rate = rate
-      u.pitch = state.friendlyPitch
-      u.volume = state.voiceVolume   // altijd maximaal binnen TTS
-      if(state.voice) u.voice = state.voice
+      u.lang='nl-NL'
+      u.rate=rate
+      u.pitch=state.friendlyPitch
+      u.volume=state.voiceVolume
+      if(state.voice) u.voice=state.voice
       speechSynthesis.speak(u)
     }catch(e){}
   }
 
-  // Settings
+  // Muziek
+  function applyMusicSettings(){
+    bgm.volume = clampNum(state.musicVolume, 0, 1)
+    if(state.musicEnabled){
+      musicBtn.style.opacity = '1'
+      musicBtn.setAttribute('aria-label','Muziek aan, tik om uit te zetten')
+    }else{
+      musicBtn.style.opacity = '.5'
+      musicBtn.setAttribute('aria-label','Muziek uit, tik om aan te zetten')
+    }
+  }
+  async function startMusicIfEnabled(){
+    try{
+      applyMusicSettings()
+      if(state.musicEnabled && bgm.paused){
+        await bgm.play()
+      }
+    }catch(e){
+      // iPad kan weigeren zonder recente tik, niets doen
+    }
+  }
+  function toggleMusic(){
+    state.musicEnabled = !state.musicEnabled
+    if(state.musicEnabled) bgm.play().catch(()=>{})
+    else bgm.pause()
+    applyMusicSettings()
+  }
+
+  // Settings laden en bewaren
   function loadSettings(){
     try{
       const raw = safeStore.get(SETTINGS_KEY)
@@ -337,6 +380,8 @@
         if(typeof s.minSpeed === 'number') state.minSpeed = s.minSpeed
         if(typeof s.maxSpeed === 'number') state.maxSpeed = s.maxSpeed
         if(typeof s.voiceVolume === 'number') state.voiceVolume = clampNum(s.voiceVolume, 0, 1)
+        if(typeof s.musicVolume === 'number') state.musicVolume = clampNum(s.musicVolume, 0, 1)
+        if(typeof s.musicEnabled === 'boolean') state.musicEnabled = s.musicEnabled
       }
     }catch(e){}
     inputMaxWave.value = state.maxWave
@@ -344,6 +389,8 @@
     inputMinSpeed.value = state.minSpeed
     inputMaxSpeed.value = state.maxSpeed
     inputVol.value = state.voiceVolume
+    inputMusicVol.value = state.musicVolume
+    applyMusicSettings()
   }
   function saveSettings(){
     state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 20)
@@ -351,17 +398,21 @@
     state.minSpeed = clampNum(parseFloat(inputMinSpeed.value), 2, 40)
     state.maxSpeed = clampNum(parseFloat(inputMaxSpeed.value), state.minSpeed+1, 50)
     state.voiceVolume = clampNum(parseFloat(inputVol.value), 0, 1)
+    state.musicVolume = clampNum(parseFloat(inputMusicVol.value), 0, 1)
+    applyMusicSettings()
     safeStore.set(SETTINGS_KEY, JSON.stringify({
       maxWave: state.maxWave,
       interLevelDelay: state.interLevelDelay,
       minSpeed: state.minSpeed,
       maxSpeed: state.maxSpeed,
-      voiceVolume: state.voiceVolume
+      voiceVolume: state.voiceVolume,
+      musicVolume: state.musicVolume,
+      musicEnabled: state.musicEnabled
     }))
     showToast('Instellingen bewaard')
   }
 
-  // Helpers voor datum en tijd, met komma’s
+  // Datum tijd helpers
   function pad2(n){ return n < 10 ? '0' + n : '' + n }
   function nowDateParts(){
     const d = new Date()
@@ -373,7 +424,7 @@
     return { datum: `${dag},${maand},${jaar}`, tijd: `${uur}:${min}` }
   }
 
-  // LOG foutregistratie
+  // Log
   function logError(level, need, clicked){
     const { datum, tijd } = nowDateParts()
     const entry = { datum, tijd, level, verwacht: need, geklikt: clicked }
@@ -490,20 +541,19 @@
   async function onBubbleTap(e){
     await ensureTTSReady()
     const el = e.currentTarget
-    const n = parseInt(el.dataset.num, 10)
+    theNumber = parseInt(el.dataset.num, 10)
     if(!state.bubbles.includes(el)) return
-    const correct = n === state.requiredNext
+    const correct = theNumber === state.requiredNext
 
     if(!correct){
-      logError(state.wave, state.requiredNext, n)
+      logError(state.wave, state.requiredNext, theNumber)
       speak('Oeps, begin opnieuw bij één', state.friendlyRate, {interrupt:true})
       showToast('Fout, begin opnieuw bij 1')
       restartCurrentWaveWithoutTeleport()
       return
     }
 
-    // spreek het cijfer snel en vriendelijk, zonder eerst te onderbreken
-    speak(word(n), state.numberRate, {interrupt:false})
+    speak(word(theNumber), state.numberRate, {interrupt:false})
 
     const rect = el.getBoundingClientRect()
     burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
@@ -515,7 +565,6 @@
       el.remove()
       state.requiredNext += 1
       if(state.bubbles.length === 0){
-        // extra ruimte zodat het laatste cijfer hoorbaar is
         setTimeout(nextWave, state.interLevelDelay * 1000)
       }else{
         enforceStacking()
@@ -647,6 +696,7 @@
     startOverlay.classList.add('hidden')
 
     speak('Tik één', state.numberRate, {interrupt:true})
+    startMusicIfEnabled()
     state.lastInteraction = performance.now()
 
     cancelAnimationFrame(state.runningRAF)
@@ -681,12 +731,13 @@
     await ensureTTSReady()
     speak(`Tik de cijfers op volgorde tot en met ${word(state.wave)}`, state.friendlyRate, {interrupt:true})
   })
+  musicBtn.addEventListener('click', toggleMusic)
 
   teacherBtn.addEventListener('click', openTeacherPanelSecure)
   closeTeacher.addEventListener('click', () => teacherPanel.classList.remove('show'))
   saveTeacher.addEventListener('click', () => { saveSettings(); teacherPanel.classList.remove('show') })
 
-  // In-game log open en sluiten
+  // Log overlay
   previewBtn.addEventListener('click', () => { renderLogIntoOverlay(); logOverlay.classList.add('show') })
   closeLogBtn.addEventListener('click', () => logOverlay.classList.remove('show'))
   clearLogBtn.addEventListener('click', () => {
@@ -700,6 +751,10 @@
   ;['pointerdown','keydown','touchstart'].forEach(ev => document.addEventListener(ev, () => { state.lastInteraction = performance.now(); hideHelper() }, {passive:true}))
   resize()
   document.addEventListener('touchmove', e => e.preventDefault(), {passive:false})
+
+  // init
+  loadSettings()
+  applyMusicSettings()
 })();
 </script>
 </body>
