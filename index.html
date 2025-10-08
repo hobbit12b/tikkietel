@@ -48,6 +48,11 @@
   #startOverlay.hidden{ display:none }
   #startOverlay .title{ font-size:clamp(22px, 3.8vmin, 30px); font-weight:1000 }
   #startOverlay .hint{ font-size:clamp(14px, 2.2vmin, 18px); opacity:.9 }
+  /* Startknop met tekst */
+  .startbtn{ border:0; border-radius:9999px; padding:14px 22px; font-weight:1000;
+    font-size:clamp(18px, 3.2vmin, 22px); color:var(--ink);
+    background: radial-gradient(circle at 30% 30%, #ffffff, #e9f3ff 70%);
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9); cursor:pointer }
 
   .bubble{
     position:absolute; display:grid; place-items:center; border-radius:9999px;
@@ -93,8 +98,8 @@
 
   .slide-in{ transition: transform .9s cubic-bezier(.2,.9,.2,1) }
 
-  /* Log overlay in-game */
-  #logOverlay{ position:absolute; inset:0; background: rgba(255,255,255,.88); backdrop-filter: blur(6px);
+  /* In-game log overlay, altijd bovenaan */
+  #logOverlay{ position:fixed; inset:0; z-index:9999; background: rgba(255,255,255,.9); backdrop-filter: blur(6px);
     display:none; align-items:center; justify-content:center; padding:24px }
   #logOverlay.show{ display:flex }
   .logcard{ width:min(92vw, 560px); max-height:76vh; background:#fff; border:1px solid rgba(0,0,0,.08);
@@ -121,14 +126,6 @@
         <button class="imgbtn" id="nogeensBtn" type="button" aria-label="Nog eens">
           <img src="nogeens.png" alt="Nog eens">
         </button>
-        <!-- Aan uit muziek -->
-        <button class="roundbtn" id="musicBtn" type="button" aria-label="Muziek aan of uit" title="Muziek">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M9 18V5l12-2v13"/>
-            <circle cx="6" cy="18" r="3"/>
-            <circle cx="18" cy="16" r="3"/>
-          </svg>
-        </button>
       </div>
     </div>
 
@@ -141,12 +138,11 @@
       </svg>
     </div>
 
+    <!-- Startscherm met tekstknop Start -->
     <div id="startOverlay" aria-modal="true" role="dialog">
       <div class="title">Klaar voor het spel</div>
       <div class="hint">Klik de cijfers, op volgorde</div>
-      <button class="imgbtn" id="startBtn" type="button" aria-label="Start">
-        <img src="nogeens.png" alt="Start">
-      </button>
+      <button class="startbtn" id="startBtn" type="button" aria-label="Start">Start</button>
     </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
@@ -166,7 +162,7 @@
       <div class="row" style="align-items:flex-start">
         <label>Bekijk log</label>
         <div>
-          <button id="previewBtn" type="button" style="padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background: rgba(0,0,0,.06); font-weight:900; cursor:pointer">Open</button>
+          <button id="previewBtn" type="button" style="padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background: rgba(0,0,0,.06); font-weight:900; cursor:pointer">Bekijk</button>
           <div style="font-size:12px; opacity:.8; margin-top:6px">Log toont fouten met datum, tijd en details</div>
         </div>
       </div>
@@ -199,7 +195,6 @@
   const startBtn = document.getElementById('startBtn')
   const vraagBtn = document.getElementById('vraagBtn')
   const nogeensBtn = document.getElementById('nogeensBtn')
-  const musicBtn = document.getElementById('musicBtn')
   const toast = document.getElementById('toast')
   const badge = document.getElementById('badge')
   const helper = document.getElementById('helper')
@@ -344,13 +339,6 @@
   // Muziek
   function applyMusicSettings(){
     bgm.volume = clampNum(state.musicVolume, 0, 1)
-    if(state.musicEnabled){
-      musicBtn.style.opacity = '1'
-      musicBtn.setAttribute('aria-label','Muziek aan, tik om uit te zetten')
-    }else{
-      musicBtn.style.opacity = '.5'
-      musicBtn.setAttribute('aria-label','Muziek uit, tik om aan te zetten')
-    }
   }
   async function startMusicIfEnabled(){
     try{
@@ -358,18 +346,10 @@
       if(state.musicEnabled && bgm.paused){
         await bgm.play()
       }
-    }catch(e){
-      // iPad kan weigeren zonder recente tik, niets doen
-    }
-  }
-  function toggleMusic(){
-    state.musicEnabled = !state.musicEnabled
-    if(state.musicEnabled) bgm.play().catch(()=>{})
-    else bgm.pause()
-    applyMusicSettings()
+    }catch(e){}
   }
 
-  // Settings laden en bewaren
+  // Settings
   function loadSettings(){
     try{
       const raw = safeStore.get(SETTINGS_KEY)
@@ -390,7 +370,6 @@
     inputMaxSpeed.value = state.maxSpeed
     inputVol.value = state.voiceVolume
     inputMusicVol.value = state.musicVolume
-    applyMusicSettings()
   }
   function saveSettings(){
     state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 20)
@@ -412,7 +391,7 @@
     showToast('Instellingen bewaard')
   }
 
-  // Datum tijd helpers
+  // Datum tijd
   function pad2(n){ return n < 10 ? '0' + n : '' + n }
   function nowDateParts(){
     const d = new Date()
@@ -541,19 +520,19 @@
   async function onBubbleTap(e){
     await ensureTTSReady()
     const el = e.currentTarget
-    theNumber = parseInt(el.dataset.num, 10)
+    const n = parseInt(el.dataset.num, 10)
     if(!state.bubbles.includes(el)) return
-    const correct = theNumber === state.requiredNext
+    const correct = n === state.requiredNext
 
     if(!correct){
-      logError(state.wave, state.requiredNext, theNumber)
+      logError(state.wave, state.requiredNext, n)
       speak('Oeps, begin opnieuw bij één', state.friendlyRate, {interrupt:true})
       showToast('Fout, begin opnieuw bij 1')
       restartCurrentWaveWithoutTeleport()
       return
     }
 
-    speak(word(theNumber), state.numberRate, {interrupt:false})
+    speak(word(n), state.numberRate, {interrupt:false})
 
     const rect = el.getBoundingClientRect()
     burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
@@ -695,10 +674,12 @@
     badge.textContent = 'Tik het getal op volgorde'
     startOverlay.classList.add('hidden')
 
-    speak('Tik één', state.numberRate, {interrupt:true})
-    startMusicIfEnabled()
-    state.lastInteraction = performance.now()
+    speak('Start', state.friendlyRate, {interrupt:true})
+    speak('Tik één', state.numberRate, {interrupt:false})
+    try{ if(state.musicEnabled) await bgm.play() }catch(e){}
+    bgm.volume = state.musicVolume
 
+    state.lastInteraction = performance.now()
     cancelAnimationFrame(state.runningRAF)
     state.lastTime = 0
     state.runningRAF = requestAnimationFrame(tick)
@@ -723,22 +704,23 @@
   // UI events
   startBtn.addEventListener('click', async () => {
     await ensureTTSReady()
-    speak('Start', state.friendlyRate, {interrupt:true})
-    setTimeout(start, 450)
+    start()
   })
   nogeensBtn.addEventListener('click', reset)
   vraagBtn.addEventListener('click', async () => {
     await ensureTTSReady()
     speak(`Tik de cijfers op volgorde tot en met ${word(state.wave)}`, state.friendlyRate, {interrupt:true})
   })
-  musicBtn.addEventListener('click', toggleMusic)
 
   teacherBtn.addEventListener('click', openTeacherPanelSecure)
   closeTeacher.addEventListener('click', () => teacherPanel.classList.remove('show'))
   saveTeacher.addEventListener('click', () => { saveSettings(); teacherPanel.classList.remove('show') })
 
-  // Log overlay
-  previewBtn.addEventListener('click', () => { renderLogIntoOverlay(); logOverlay.classList.add('show') })
+  // Log overlay openen en vullen
+  previewBtn.addEventListener('click', () => {
+    renderLogIntoOverlay()
+    logOverlay.classList.add('show')
+  })
   closeLogBtn.addEventListener('click', () => logOverlay.classList.remove('show'))
   clearLogBtn.addEventListener('click', () => {
     safeStore.set(LOG_KEY, JSON.stringify([]))
@@ -754,7 +736,6 @@
 
   // init
   loadSettings()
-  applyMusicSettings()
 })();
 </script>
 </body>
