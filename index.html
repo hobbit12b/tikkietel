@@ -6,63 +6,63 @@
 <title>Kleuter Cijfer Pop</title>
 <style>
   :root{
-    --bg1: #f3f1ff;
-    --bg2: #eaf7ff;
-    --ink: #0b1020;
-    --bubble-hl: #ffffff;
-    --bubble-mid: #eff9ff;
-    --bubble-lo: #d6f0ff;
-    --bubble-glow: rgba(255,255,255,.85);
+    --bg1:#f3f1ff;
+    --bg2:#eaf7ff;
+    --ink:#0b1020;
+    --bubble-hl:#ffffff;
+    --bubble-mid:#eff9ff;
+    --bubble-lo:#d6f0ff;
+    --bubble-glow:rgba(255,255,255,.85);
   }
-  *{ box-sizing:border-box; -webkit-tap-highlight-color: rgba(0,0,0,0) }
-  html, body{
-    margin:0; height:100%;
-    background:#fff; color:var(--ink);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    overscroll-behavior: none; touch-action: none;
-  }
-  #app{
-    position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden;
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:rgba(0,0,0,0) }
+  html,body{ margin:0; height:100%; background:#fff; color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+    overscroll-behavior:none; touch-action:none }
+  #app{ position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden;
     background: radial-gradient(120% 120% at 70% 20%, var(--bg1) 0%, var(--bg2) 60%, #ffffff 100%);
-    transition: background .6s ease;
-  }
+    transition: background .6s ease }
 
-  .parallax{ position:absolute; inset:-10%; pointer-events:none; filter: blur(20px); opacity:.35 }
-  .blob{ position:absolute; width: 35vmax; height:35vmax; border-radius:50%;
+  .parallax{ position:absolute; inset:-10%; pointer-events:none; filter:blur(20px); opacity:.35 }
+  .blob{ position:absolute; width:35vmax; height:35vmax; border-radius:50%;
     background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.65), rgba(255,255,255,0));
-    animation: float 38s linear infinite; mix-blend-mode: screen }
+    animation: float 38s linear infinite; mix-blend-mode:screen }
   .blob.b2{ width:28vmax; height:28vmax; animation-duration:46s; opacity:.28 }
   .blob.b3{ width:40vmax; height:40vmax; animation-duration:52s; opacity:.26 }
   @keyframes float{ 0%{transform:translate3d(-10%,-10%,0)} 50%{transform:translate3d(10%,8%,0)} 100%{transform:translate3d(-10%,-10%,0)} }
 
-  .ui{ position:absolute; left:0; right:0; top: env(safe-area-inset-top, 0px); display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px }
-  .badge{ padding:10px 14px; border-radius:9999px; background: rgba(0,0,0,.06); border:1px solid rgba(0,0,0,.05); font-weight:900; font-size: clamp(14px, 2.2vmin, 18px) }
-  .controls{ display:flex; gap:10px }
-  .iconbtn{ display:flex; align-items:center; gap:10px; border:0; border-radius:9999px; padding:12px 16px; font-weight:900; font-size: clamp(14px, 2.2vmin, 18px); color:var(--ink); background: rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.06); cursor:pointer }
-  .iconbtn svg{ width:22px; height:22px }
-  .roundbtn{ width:48px; height:48px; border-radius:9999px; display:grid; place-items:center; border:0; background: radial-gradient(circle at 30% 30%, #ffffff, #e9f3ff 70%); box-shadow: 0 6px 16px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9); cursor:pointer }
-  .roundbtn svg{ width:22px; height:22px }
+  .ui{ position:absolute; left:0; right:0; top: env(safe-area-inset-top, 0px);
+    display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px }
+  .badge{ padding:10px 14px; border-radius:9999px; background:rgba(0,0,0,.06); border:1px solid rgba(0,0,0,.05);
+    font-weight:900; font-size:clamp(14px, 2.2vmin, 18px) }
 
-  #startOverlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px; background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.7)); backdrop-filter: blur(4px); text-align:center }
+  /* Nieuwe beeldknoppen rechtsboven */
+  .controls{ display:flex; gap:10px }
+  .imgbtn{ width:48px; height:48px; border-radius:9999px; border:0; padding:0; background:#fff;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9); cursor:pointer; display:grid; place-items:center }
+  .imgbtn img{ width:28px; height:28px; display:block }
+
+  #startOverlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px;
+    background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.7)); backdrop-filter: blur(4px); text-align:center }
   #startOverlay.hidden{ display:none }
-  #startOverlay .title{ font-size: clamp(22px, 3.8vmin, 30px); font-weight:1000 }
-  #startOverlay .hint{ font-size: clamp(14px, 2.2vmin, 18px); opacity:.9 }
+  #startOverlay .title{ font-size:clamp(22px, 3.8vmin, 30px); font-weight:1000 }
+  #startOverlay .hint{ font-size:clamp(14px, 2.2vmin, 18px); opacity:.9 }
 
   .bubble{
     position:absolute; display:grid; place-items:center; border-radius:9999px;
-    font-weight:1000; font-size: clamp(38px, 6.6vmin, 64px); color:#0b1020;
+    font-weight:1000; font-size:clamp(38px, 6.6vmin, 64px); color:#0b1020;
     background: radial-gradient(140% 140% at 30% 25%, var(--bubble-hl) 0%, var(--bubble-mid) 40%, var(--bubble-lo) 100%);
     border:2px solid rgba(255,255,255,.9);
     box-shadow: inset 0 1px 1px rgba(255,255,255,.8), inset 0 -10px 18px rgba(0,0,0,.08), 0 12px 28px rgba(0,0,0,.12);
-    transform: translate3d(0,0,0) scale(1);
-    will-change: transform; user-select:none; -webkit-user-select:none; transition: transform .16s ease;
+    transform: translate3d(0,0,0) scale(1); will-change:transform; user-select:none; -webkit-user-select:none; transition:transform .16s ease;
   }
-  .bubble::before{ content:""; position:absolute; inset:-18%; border-radius:inherit; background: radial-gradient(circle at 50% 50%, var(--bubble-glow), rgba(255,255,255,0) 60%); filter: blur(10px); z-index:-1 }
+  .bubble::before{ content:""; position:absolute; inset:-18%; border-radius:inherit;
+    background: radial-gradient(circle at 50% 50%, var(--bubble-glow), rgba(255,255,255,0) 60%); filter:blur(10px); z-index:-1 }
   .bubble::after{ content:""; position:absolute; top:12%; left:18%; width:28%; height:22%; border-radius:9999px; background: rgba(255,255,255,.65); filter: blur(1px); transform: rotate(12deg); pointer-events:none }
 
   .pop{ animation: pop .33s cubic-bezier(.2,.9,.2,1) forwards }
   @keyframes pop{ 0%{transform: var(--t) scale(1) rotate(0); opacity:1} 45%{transform: var(--t) scale(1.25) rotate(5deg)} 100%{transform: var(--t) scale(.4) rotate(-10deg); opacity:0} }
-  .ring{ position:absolute; pointer-events:none; border-radius:9999px; border:3px solid rgba(0,0,0,.12); transform: translate(-50%,-50%) scale(.6); opacity:.9; animation: ring .45s ease-out forwards }
+  .ring{ position:absolute; pointer-events:none; border-radius:9999px; border:3px solid rgba(0,0,0,.12);
+    transform: translate(-50%,-50%) scale(.6); opacity:.9; animation: ring .45s ease-out forwards }
   @keyframes ring{ to{ transform: translate(-50%,-50%) scale(1.45); opacity:0 } }
   .dot{ position:absolute; width:12px; height:12px; border-radius:9999px; opacity:.95; transform: translate(-50%,-50%) scale(1); animation: dot .55s ease-out forwards }
   @keyframes dot{ to{ transform: translate(var(--dx), var(--dy)) scale(.8); opacity:0 } }
@@ -72,12 +72,14 @@
   .helper .hand{ width:100%; height:100%; animation: nod 1.2s ease-in-out infinite }
   @keyframes nod{ 0%,100%{ transform: translateY(0) rotate(0) } 50%{ transform: translateY(6px) rotate(2deg) } }
 
-  #toast{ position:absolute; left:50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding:10px 14px; background: rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.06); color:var(--ink); border-radius:12px; font-weight:900; font-size:14px; opacity:0; transition: opacity .25s ease; pointer-events:none }
+  #toast{ position:absolute; left:50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    padding:10px 14px; background: rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.06); color:var(--ink); border-radius:12px; font-weight:900; font-size:14px; opacity:0; transition: opacity .25s ease; pointer-events:none }
   #toast.show{ opacity:1 }
 
   .teacher-toggle{ position:absolute; left:12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display:flex; gap:8px }
   .chip{ border:1px solid rgba(0,0,0,.10); background: rgba(0,0,0,.06); padding:8px 10px; border-radius:9999px; font-weight:800; cursor:pointer }
-  .panel{ position:absolute; left:12px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); width: min(92vw, 420px); background: rgba(255,255,255,.95); border:1px solid rgba(0,0,0,.08); border-radius:16px; box-shadow: 0 10px 28px rgba(0,0,0,.12); padding:12px; display:none }
+  .panel{ position:absolute; left:12px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); width: min(92vw, 420px); background: rgba(255,255,255,.95);
+    border:1px solid rgba(0,0,0,.08); border-radius:16px; box-shadow: 0 10px 28px rgba(0,0,0,.12); padding:12px; display:none }
   .panel.show{ display:block }
   .panel h3{ margin:6px 6px 10px; font-size:16px }
   .row{ display:flex; align-items:center; gap:10px; margin:10px 6px }
@@ -88,6 +90,16 @@
   .panel button{ padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background: rgba(0,0,0,.06); font-weight:900; cursor:pointer }
 
   .slide-in{ transition: transform .9s cubic-bezier(.2,.9,.2,1) }
+
+  /* Log overlay in-game */
+  #logOverlay{ position:absolute; inset:0; background: rgba(255,255,255,.88); backdrop-filter: blur(6px);
+    display:none; align-items:center; justify-content:center; padding:24px }
+  #logOverlay.show{ display:flex }
+  .logcard{ width:min(92vw, 560px); max-height:76vh; background:#fff; border:1px solid rgba(0,0,0,.08);
+    border-radius:16px; box-shadow:0 12px 28px rgba(0,0,0,.12); display:flex; flex-direction:column }
+  .logcard header{ padding:12px 14px; font-weight:900; border-bottom:1px solid rgba(0,0,0,.06); display:flex; justify-content:space-between; align-items:center }
+  .logcard header button{ border:0; background:rgba(0,0,0,.06); border-radius:10px; padding:6px 10px; font-weight:900; cursor:pointer }
+  .loglist{ padding:12px; overflow:auto; font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap }
 </style>
 </head>
 <body>
@@ -101,18 +113,11 @@
     <div class="ui">
       <div class="badge" id="badge">Tik het getal op volgorde</div>
       <div class="controls">
-        <button class="iconbtn" id="speakBtn" type="button" aria-label="Lees voor">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 18c0 2 1.5 3 3 3s3-1 3-3c0-3 3-3 3-7a6 6 0 0 0-12 0"/>
-            <path d="M9 9a3 3 0 0 1 6 0"/>
-          </svg>
-          Lees voor
+        <button class="imgbtn" id="vraagBtn" type="button" aria-label="Vraag">
+          <img src="vraag.png" alt="Vraag">
         </button>
-        <button class="roundbtn" id="resetBtn" type="button" aria-label="Opnieuw">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12a9 9 0 1 0 9-9"/>
-            <path d="M3 4v8h8"/>
-          </svg>
+        <button class="imgbtn" id="nogeensBtn" type="button" aria-label="Nog eens">
+          <img src="nogeens.png" alt="Nog eens">
         </button>
       </div>
     </div>
@@ -129,7 +134,9 @@
     <div id="startOverlay" aria-modal="true" role="dialog">
       <div class="title">Klaar voor het spel</div>
       <div class="hint">Klik de cijfers, op volgorde</div>
-      <button class="iconbtn" id="startBtn" type="button">▶ Start</button>
+      <button class="imgbtn" id="startBtn" type="button" aria-label="Start">
+        <img src="nogeens.png" alt="Start">
+      </button>
     </div>
 
     <div id="toast" role="status" aria-live="polite"></div>
@@ -141,8 +148,9 @@
     <div class="panel" id="teacherPanel" role="dialog" aria-label="Leerkracht instellingen">
       <h3>Instellingen</h3>
       <div class="row"><label for="maxWave">Maximaal cijfer</label><input id="maxWave" type="number" min="3" max="20" step="1" /></div>
-      <div class="row"><label for="delay">Tijd tussen levels, seconden</label><input id="delay" type="number" min="0" max="5" step="0.5" /></div>
+      <div class="row"><label for="delay">Tijd tussen levels, seconden</label><input id="delay" type="number" min="0" max="5" step="0.1" /></div>
       <div class="row"><label>Snelheid bubbels</label><input id="minSpeed" type="range" min="4" max="40" step="1" /><input id="maxSpeed" type="range" min="6" max="50" step="1" /></div>
+      <div class="row"><label for="vol">Volume stem</label><input id="vol" type="range" min="0" max="1" step="0.05" /></div>
 
       <div class="row" style="align-items:flex-start">
         <label>Bekijk log</label>
@@ -154,6 +162,20 @@
 
       <div class="actions"><button id="saveTeacher" type="button">Bewaar</button><button id="closeTeacher" type="button">Sluit</button></div>
     </div>
+
+    <!-- In-game log overlay -->
+    <div id="logOverlay" aria-modal="true" role="dialog">
+      <div class="logcard" role="document">
+        <header>
+          <div>Foutenlog</div>
+          <div style="display:flex;gap:8px">
+            <button id="clearLogBtn" type="button">Wis</button>
+            <button id="closeLogBtn" type="button">Sluit</button>
+          </div>
+        </header>
+        <div id="logList" class="loglist">Geen fouten geregistreerd</div>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -161,8 +183,8 @@
   const app = document.getElementById('app')
   const startOverlay = document.getElementById('startOverlay')
   const startBtn = document.getElementById('startBtn')
-  const speakBtn = document.getElementById('speakBtn')
-  const resetBtn = document.getElementById('resetBtn')
+  const vraagBtn = document.getElementById('vraagBtn')
+  const nogeensBtn = document.getElementById('nogeensBtn')
   const toast = document.getElementById('toast')
   const badge = document.getElementById('badge')
   const helper = document.getElementById('helper')
@@ -175,12 +197,18 @@
   const inputDelay = document.getElementById('delay')
   const inputMinSpeed = document.getElementById('minSpeed')
   const inputMaxSpeed = document.getElementById('maxSpeed')
+  const inputVol = document.getElementById('vol')
   const previewBtn = document.getElementById('previewBtn')
 
+  const logOverlay = document.getElementById('logOverlay')
+  const logList = document.getElementById('logList')
+  const closeLogBtn = document.getElementById('closeLogBtn')
+  const clearLogBtn = document.getElementById('clearLogBtn')
+
   const PASTELS = [
-    ['#fde2e4', '#fff1f1'], ['#dfe7fd', '#eef3ff'], ['#e4f1e1', '#f2faef'],
-    ['#fff4cc', '#fff9e6'], ['#f3e8ff', '#f9f2ff'], ['#eaf7ff', '#f5fbff'],
-    ['#ffe9f2', '#fff3f8'], ['#e9fff5', '#f3fffa'], ['#fff0e6', '#fff7f2'], ['#eef7ff', '#f6fbff']
+    ['#fde2e4','#fff1f1'], ['#dfe7fd','#eef3ff'], ['#e4f1e1','#f2faef'],
+    ['#fff4cc','#fff9e6'], ['#f3e8ff','#f9f2ff'], ['#eaf7ff','#f5fbff'],
+    ['#ffe9f2','#fff3f8'], ['#e9fff5','#f3fffa'], ['#fff0e6','#fff7f2'], ['#eef7ff','#f6fbff']
   ]
   const NUM_WORDS_NL = {0:'nul',1:'één',2:'twee',3:'drie',4:'vier',5:'vijf',6:'zes',7:'zeven',8:'acht',9:'negen',10:'tien',11:'elf',12:'twaalf',13:'dertien',14:'veertien',15:'vijftien',16:'zestien',17:'zeventien',18:'achttien',19:'negentien',20:'twintig'}
 
@@ -193,47 +221,39 @@
     let ok = true
     try{
       const t = '__test__' + Math.random()
-      localStorage.setItem(t, '1')
-      localStorage.removeItem(t)
+      localStorage.setItem(t,'1'); localStorage.removeItem(t)
     }catch(e){ ok = false }
     return {
-      get(key, d='null'){
-        try{
-          if(ok) return localStorage.getItem(key) ?? d
-          return key in memory ? memory[key] : d
-        }catch(e){ return d }
-      },
-      set(key, val){
-        try{
-          if(ok) localStorage.setItem(key, val)
-          else memory[key] = val
-          return true
-        }catch(e){ return false }
-      }
+      get(key, d='null'){ try{ if(ok) return localStorage.getItem(key) ?? d; return key in memory ? memory[key] : d }catch(e){ return d } },
+      set(key, val){ try{ if(ok) localStorage.setItem(key,val); else memory[key]=val; return true }catch(e){ return false } }
     }
   })()
 
   const state = {
-    moving: false,
-    wave: 1,
-    requiredNext: 1,
-    maxWave: 10,
-    bubbles: [],
-    velocities: [],
-    jerkMeta: new Map(),
-    runningRAF: 0,
-    lastTime: 0,
-    voice: null,
-    voicePrimed: false,
-    voicesLoaded: false,
-    minSpeed: 10,
-    maxSpeed: 22,
-    minSize: 110,
-    maxSize: 190,
-    interLevelDelay: 0.5,
-    logging: true,
-    idleMs: 5000,
-    lastInteraction: 0
+    moving:false,
+    wave:1,
+    requiredNext:1,
+    maxWave:10,
+    bubbles:[],
+    velocities:[],
+    jerkMeta:new Map(),
+    runningRAF:0,
+    lastTime:0,
+    voice:null,
+    voicePrimed:false,
+    voicesLoaded:false,
+    minSpeed:10,
+    maxSpeed:22,
+    minSize:110,
+    maxSize:190,
+    interLevelDelay:1.8,           // langer wachten tussen levels
+    logging:true,
+    idleMs:5000,
+    lastInteraction:0,
+    voiceVolume:1.0,               // maximaal volume
+    friendlyRate:0.96,             // vriendelijker basis-snelheid
+    numberRate:0.98,               // net iets langzamer voor cijfers
+    friendlyPitch:1.15
   }
 
   function clampNum(v,a,b){ return Math.max(a, Math.min(b, v)) }
@@ -254,19 +274,16 @@
     toast.textContent = msg
     toast.classList.add('show')
     clearTimeout(showToast._t)
-    showToast._t = setTimeout(() => toast.classList.remove('show'), 1100)
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1200)
   }
 
-  // TTS robuust voor iPad
+  // TTS robuust en vriendelijk
   function loadVoices(){
     return new Promise(resolve => {
       const got = speechSynthesis.getVoices()
       if(got && got.length){ resolve(got) }
       else{
-        const onv = () => {
-          speechSynthesis.onvoiceschanged = null
-          resolve(speechSynthesis.getVoices())
-        }
+        const onv = () => { speechSynthesis.onvoiceschanged = null; resolve(speechSynthesis.getVoices()) }
         speechSynthesis.onvoiceschanged = onv
         setTimeout(onv, 1200)
       }
@@ -284,9 +301,7 @@
     if(state.voicePrimed && state.voicesLoaded) return
     try{
       const u = new SpeechSynthesisUtterance('.')
-      u.lang = 'nl-NL'
-      u.volume = 0.01
-      u.rate = 1
+      u.lang = 'nl-NL'; u.volume = 0.01; u.rate = 1
       u.onend = () => { state.voicePrimed = true }
       speechSynthesis.speak(u)
     }catch(e){}
@@ -297,12 +312,15 @@
     }catch(e){}
   }
 
-  function speak(text, rate=1.10){
+  // nieuwer: niet altijd onderbreken, zodat cijfers sneller starten
+  function speak(text, rate=state.friendlyRate, opts={interrupt:true}){
     try{
-      speechSynthesis.cancel()
+      if(opts.interrupt) speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(text)
       u.lang = 'nl-NL'
       u.rate = rate
+      u.pitch = state.friendlyPitch
+      u.volume = state.voiceVolume   // altijd maximaal binnen TTS
       if(state.voice) u.voice = state.voice
       speechSynthesis.speak(u)
     }catch(e){}
@@ -318,26 +336,32 @@
         if(typeof s.interLevelDelay === 'number') state.interLevelDelay = s.interLevelDelay
         if(typeof s.minSpeed === 'number') state.minSpeed = s.minSpeed
         if(typeof s.maxSpeed === 'number') state.maxSpeed = s.maxSpeed
+        if(typeof s.voiceVolume === 'number') state.voiceVolume = clampNum(s.voiceVolume, 0, 1)
       }
     }catch(e){}
     inputMaxWave.value = state.maxWave
     inputDelay.value = state.interLevelDelay
     inputMinSpeed.value = state.minSpeed
     inputMaxSpeed.value = state.maxSpeed
+    inputVol.value = state.voiceVolume
   }
   function saveSettings(){
     state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 20)
     state.interLevelDelay = clampNum(parseFloat(inputDelay.value), 0, 5)
     state.minSpeed = clampNum(parseFloat(inputMinSpeed.value), 2, 40)
     state.maxSpeed = clampNum(parseFloat(inputMaxSpeed.value), state.minSpeed+1, 50)
+    state.voiceVolume = clampNum(parseFloat(inputVol.value), 0, 1)
     safeStore.set(SETTINGS_KEY, JSON.stringify({
-      maxWave: state.maxWave, interLevelDelay: state.interLevelDelay,
-      minSpeed: state.minSpeed, maxSpeed: state.maxSpeed
+      maxWave: state.maxWave,
+      interLevelDelay: state.interLevelDelay,
+      minSpeed: state.minSpeed,
+      maxSpeed: state.maxSpeed,
+      voiceVolume: state.voiceVolume
     }))
     showToast('Instellingen bewaard')
   }
 
-  // Helpers voor datum en tijd
+  // Helpers voor datum en tijd, met komma’s
   function pad2(n){ return n < 10 ? '0' + n : '' + n }
   function nowDateParts(){
     const d = new Date()
@@ -346,43 +370,29 @@
     const jaar = d.getFullYear()
     const uur = pad2(d.getHours())
     const min = pad2(d.getMinutes())
-    // datum als dag, maand, jaar, tijd als uu:mm
     return { datum: `${dag},${maand},${jaar}`, tijd: `${uur}:${min}` }
   }
 
-  // LOG foutregistratie in gewenst formaat
+  // LOG foutregistratie
   function logError(level, need, clicked){
     const { datum, tijd } = nowDateParts()
-    const entry = {
-      datum, tijd,
-      level,
-      verwacht: need,
-      geklikt: clicked
-    }
+    const entry = { datum, tijd, level, verwacht: need, geklikt: clicked }
     try{
       const arr = JSON.parse(safeStore.get(LOG_KEY) || '[]')
       arr.push(entry)
       safeStore.set(LOG_KEY, JSON.stringify(arr))
     }catch(e){}
   }
-
-  // Voorbeeldweergave exact in jouw tekstformat
-  function previewLog(){
+  function renderLogIntoOverlay(){
     const arr = JSON.parse(safeStore.get(LOG_KEY) || '[]')
-    const lines = arr.map(e => {
-      return [
-        `datum: ${e.datum}`,
-        `tijd: ${e.tijd}`,
-        `ik zat in level: ${e.level}`,
-        `Het cijfer waarop ik moest klikken was: ${e.verwacht}`,
-        `maar ik klikte op cijfer: ${e.geklikt}`
-      ].join('\n')
-    })
-    const txt = lines.length ? lines.join('\n\n') : 'Geen fouten geregistreerd'
-    const safe = txt.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))
-    const html = `<pre style="white-space:pre-wrap;padding:16px;font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;">${safe}</pre>`
-    const w = window.open('', '_blank')
-    if(w){ w.document.write(`<title>Foutenlog</title>${html}`); w.document.close() } else { alert('Kan geen venster openen, mogelijk blokkeert je browser dit') }
+    if(!arr.length){ logList.textContent = 'Geen fouten geregistreerd'; return }
+    logList.textContent = arr.map(e => [
+      `datum: ${e.datum}`,
+      `tijd: ${e.tijd}`,
+      `ik zat in level: ${e.level}`,
+      `Het cijfer waarop ik moest klikken was: ${e.verwacht}`,
+      `maar ik klikte op cijfer: ${e.geklikt}`
+    ].join('\n')).join('\n\n')
   }
 
   // Helperhand
@@ -409,10 +419,7 @@
     for(const b of state.bubbles){ b.removeEventListener('pointerdown', onBubbleTap); b.remove() }
     state.bubbles = []; state.velocities = []; state.jerkMeta.clear()
   }
-  function setTransform(el, x, y){
-    el.style.setProperty('--t', `translate3d(${x}px, ${y}px, 0)`)
-    el.style.transform = `translate3d(${x}px, ${y}px, 0)`
-  }
+  function setTransform(el,x,y){ el.style.setProperty('--t', `translate3d(${x}px, ${y}px, 0)`); el.style.transform = `translate3d(${x}px, ${y}px, 0)` }
   function overlapsExisting(x,y,size){
     for(const b of state.bubbles){
       const bx = parseFloat(b.dataset.x), by = parseFloat(b.dataset.y), bs = parseFloat(b.dataset.size)
@@ -457,7 +464,11 @@
     for(const b of state.bubbles){ const n = parseInt(b.dataset.num,10); if(n < minN) minN = n }
     for(const b of state.bubbles){ const n = parseInt(b.dataset.num,10); b.style.zIndex = String(1000 - n) }
     const minB = state.bubbles.find(b => parseInt(b.dataset.num,10) === minN)
-    if(minB){ const x = parseFloat(minB.dataset.x), y = parseFloat(minB.dataset.y); minB.style.transform = `translate3d(${x}px, ${y}px, 1px)`; setTimeout(() => setTransform(minB, x, y), 0) }
+    if(minB){
+      const x = parseFloat(minB.dataset.x), y = parseFloat(minB.dataset.y)
+      minB.style.transform = `translate3d(${x}px, ${y}px, 1px)`
+      setTimeout(() => setTransform(minB, x, y), 0)
+    }
   }
 
   function burst(x,y,baseSize){
@@ -478,23 +489,22 @@
   // Kliklogica
   async function onBubbleTap(e){
     await ensureTTSReady()
-
     const el = e.currentTarget
     const n = parseInt(el.dataset.num, 10)
     if(!state.bubbles.includes(el)) return
-
     const correct = n === state.requiredNext
 
     if(!correct){
-      // log met datum, tijd, level, verwacht, geklikt
       logError(state.wave, state.requiredNext, n)
-      speak('Oeps, begin opnieuw bij één', 1.04)
+      speak('Oeps, begin opnieuw bij één', state.friendlyRate, {interrupt:true})
       showToast('Fout, begin opnieuw bij 1')
       restartCurrentWaveWithoutTeleport()
       return
     }
 
-    speak(word(n), 1.10)
+    // spreek het cijfer snel en vriendelijk, zonder eerst te onderbreken
+    speak(word(n), state.numberRate, {interrupt:false})
+
     const rect = el.getBoundingClientRect()
     burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
 
@@ -505,6 +515,7 @@
       el.remove()
       state.requiredNext += 1
       if(state.bubbles.length === 0){
+        // extra ruimte zodat het laatste cijfer hoorbaar is
         setTimeout(nextWave, state.interLevelDelay * 1000)
       }else{
         enforceStacking()
@@ -572,10 +583,10 @@
     if(state.wave > state.maxWave){
       state.wave = 1
       showToast('We beginnen opnieuw bij 1')
-      speak('We beginnen opnieuw bij één', 1.02)
+      speak('We beginnen opnieuw bij één', state.friendlyRate, {interrupt:true})
     }else{
       showToast(`Nu tot en met ${state.wave}`)
-      speak(`Nu tot en met ${word(state.wave)}`, 1.02)
+      speak(`Nu tot en met ${word(state.wave)}`, state.friendlyRate, {interrupt:true})
     }
     state.moving = state.wave >= 2
     state.requiredNext = 1
@@ -635,7 +646,7 @@
     badge.textContent = 'Tik het getal op volgorde'
     startOverlay.classList.add('hidden')
 
-    speak('Tik één', 1.10)
+    speak('Tik één', state.numberRate, {interrupt:true})
     state.lastInteraction = performance.now()
 
     cancelAnimationFrame(state.runningRAF)
@@ -644,7 +655,7 @@
   }
   function reset(){ start() }
 
-  // Leerkracht beveiliging met tafel van 4
+  // Leerkracht beveiliging
   function openTeacherPanelSecure(){
     const a = 4
     const b = Math.floor(Math.random()*9)+1
@@ -660,22 +671,28 @@
   }
 
   // UI events
-  // Spreek eerst "Start", daarna begin het spel met een korte vertraging
   startBtn.addEventListener('click', async () => {
     await ensureTTSReady()
-    speak('Start', 1.0)
+    speak('Start', state.friendlyRate, {interrupt:true})
     setTimeout(start, 450)
   })
-
-  resetBtn.addEventListener('click', reset)
-  speakBtn.addEventListener('click', async () => {
+  nogeensBtn.addEventListener('click', reset)
+  vraagBtn.addEventListener('click', async () => {
     await ensureTTSReady()
-    speak(`Tik de cijfers op volgorde tot en met ${word(state.wave)}`, 1.06)
+    speak(`Tik de cijfers op volgorde tot en met ${word(state.wave)}`, state.friendlyRate, {interrupt:true})
   })
+
   teacherBtn.addEventListener('click', openTeacherPanelSecure)
   closeTeacher.addEventListener('click', () => teacherPanel.classList.remove('show'))
   saveTeacher.addEventListener('click', () => { saveSettings(); teacherPanel.classList.remove('show') })
-  previewBtn.addEventListener('click', () => previewLog())
+
+  // In-game log open en sluiten
+  previewBtn.addEventListener('click', () => { renderLogIntoOverlay(); logOverlay.classList.add('show') })
+  closeLogBtn.addEventListener('click', () => logOverlay.classList.remove('show'))
+  clearLogBtn.addEventListener('click', () => {
+    safeStore.set(LOG_KEY, JSON.stringify([]))
+    renderLogIntoOverlay()
+  })
 
   const oncePrime = async () => { await ensureTTSReady(); document.removeEventListener('pointerdown', oncePrime) }
   document.addEventListener('pointerdown', oncePrime, {passive:true})
