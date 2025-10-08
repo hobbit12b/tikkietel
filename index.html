@@ -48,7 +48,6 @@
   #startOverlay.hidden{ display:none }
   #startOverlay .title{ font-size:clamp(22px, 3.8vmin, 30px); font-weight:1000 }
   #startOverlay .hint{ font-size:clamp(14px, 2.2vmin, 18px); opacity:.9 }
-  /* Startknop met tekst */
   .startbtn{ border:0; border-radius:9999px; padding:14px 22px; font-weight:1000;
     font-size:clamp(18px, 3.2vmin, 22px); color:var(--ink);
     background: radial-gradient(circle at 30% 30%, #ffffff, #e9f3ff 70%);
@@ -98,15 +97,15 @@
 
   .slide-in{ transition: transform .9s cubic-bezier(.2,.9,.2,1) }
 
-  /* In-game log overlay, altijd bovenaan */
-  #logOverlay{ position:fixed; inset:0; z-index:9999; background: rgba(255,255,255,.9); backdrop-filter: blur(6px);
-    display:none; align-items:center; justify-content:center; padding:24px }
+  /* Log overlay, nu los van #app en iPad-vriendelijk */
+  #logOverlay{ position:fixed; inset:0; z-index:999999; background: rgba(255,255,255,.9);
+    backdrop-filter: blur(6px); display:none; align-items:center; justify-content:center; padding:24px; contain:paint }
   #logOverlay.show{ display:flex }
   .logcard{ width:min(92vw, 560px); max-height:76vh; background:#fff; border:1px solid rgba(0,0,0,.08);
-    border-radius:16px; box-shadow:0 12px 28px rgba(0,0,0,.12); display:flex; flex-direction:column }
+    border-radius:16px; box-shadow:0 12px 28px rgba(0,0,0,.12); display:flex; flex-direction:column; overflow:hidden }
   .logcard header{ padding:12px 14px; font-weight:900; border-bottom:1px solid rgba(0,0,0,.06); display:flex; justify-content:space-between; align-items:center }
   .logcard header button{ border:0; background:rgba(0,0,0,.06); border-radius:10px; padding:6px 10px; font-weight:900; cursor:pointer }
-  .loglist{ padding:12px; overflow:auto; font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap }
+  .loglist{ padding:12px; overflow:auto; font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; -webkit-overflow-scrolling:touch }
 </style>
 </head>
 <body>
@@ -126,6 +125,10 @@
         <button class="imgbtn" id="nogeensBtn" type="button" aria-label="Nog eens">
           <img src="nogeens.png" alt="Nog eens">
         </button>
+        <!-- NIEUW, muziek aan of uit -->
+        <button class="imgbtn" id="musicBtn" type="button" aria-label="Muziek aan of uit" aria-pressed="false" title="Muziek aan of uit">
+          <img id="musicIcon" src="music-off.png" alt="Muziek uit">
+        </button>
       </div>
     </div>
 
@@ -138,7 +141,6 @@
       </svg>
     </div>
 
-    <!-- Startscherm met tekstknop Start -->
     <div id="startOverlay" aria-modal="true" role="dialog">
       <div class="title">Klaar voor het spel</div>
       <div class="hint">Klik de cijfers, op volgorde</div>
@@ -170,22 +172,22 @@
       <div class="actions"><button id="saveTeacher" type="button">Bewaar</button><button id="closeTeacher" type="button">Sluit</button></div>
     </div>
 
-    <!-- In-game log overlay -->
-    <div id="logOverlay" aria-modal="true" role="dialog">
-      <div class="logcard" role="document">
-        <header>
-          <div>Foutenlog</div>
-          <div style="display:flex;gap:8px">
-            <button id="clearLogBtn" type="button">Wis</button>
-            <button id="closeLogBtn" type="button">Sluit</button>
-          </div>
-        </header>
-        <div id="logList" class="loglist">Geen fouten geregistreerd</div>
-      </div>
-    </div>
-
     <!-- Achtergrondmuziek -->
     <audio id="bgm" src="soft-ambient-textures-with-subtle-bird-chirps-377058.mp3" loop preload="auto"></audio>
+  </div>
+
+  <!-- Log overlay verplaatst buiten #app, iPad vriendelijk -->
+  <div id="logOverlay" aria-modal="true" role="dialog">
+    <div class="logcard" role="document">
+      <header>
+        <div>Foutenlog</div>
+        <div style="display:flex;gap:8px">
+          <button id="clearLogBtn" type="button">Wis</button>
+          <button id="closeLogBtn" type="button">Sluit</button>
+        </div>
+      </header>
+      <div id="logList" class="loglist">Geen fouten geregistreerd</div>
+    </div>
   </div>
 
 <script>
@@ -217,6 +219,10 @@
   const clearLogBtn = document.getElementById('clearLogBtn')
 
   const bgm = document.getElementById('bgm')
+
+  // NIEUW, muziekknop
+  const musicBtn = document.getElementById('musicBtn')
+  const musicIcon = document.getElementById('musicIcon')
 
   const PASTELS = [
     ['#fde2e4','#fff1f1'], ['#dfe7fd','#eef3ff'], ['#e4f1e1','#f2faef'],
@@ -339,6 +345,7 @@
   // Muziek
   function applyMusicSettings(){
     bgm.volume = clampNum(state.musicVolume, 0, 1)
+    updateMusicButtonUI()
   }
   async function startMusicIfEnabled(){
     try{
@@ -347,6 +354,33 @@
         await bgm.play()
       }
     }catch(e){}
+    updateMusicButtonUI()
+  }
+  function updateMusicButtonUI(){
+    const on = state.musicEnabled && !bgm.paused
+    musicBtn.setAttribute('aria-pressed', on ? 'true' : 'false')
+    if(musicIcon){
+      musicIcon.src = on ? 'music-on.png' : 'music-off.png'
+      musicIcon.alt = on ? 'Muziek aan' : 'Muziek uit'
+    }
+    musicBtn.title = on ? 'Muziek uit' : 'Muziek aan'
+  }
+  async function toggleMusic(){
+    state.musicEnabled = !state.musicEnabled
+    applyMusicSettings()
+    try{
+      if(state.musicEnabled){ await bgm.play() } else { bgm.pause() }
+    }catch(e){}
+    safeStore.set(SETTINGS_KEY, JSON.stringify({
+      maxWave: state.maxWave,
+      interLevelDelay: state.interLevelDelay,
+      minSpeed: state.minSpeed,
+      maxSpeed: state.maxSpeed,
+      voiceVolume: state.voiceVolume,
+      musicVolume: state.musicVolume,
+      musicEnabled: state.musicEnabled
+    }))
+    updateMusicButtonUI()
   }
 
   // Settings
@@ -370,6 +404,7 @@
     inputMaxSpeed.value = state.maxSpeed
     inputVol.value = state.voiceVolume
     inputMusicVol.value = state.musicVolume
+    updateMusicButtonUI()
   }
   function saveSettings(){
     state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 20)
@@ -414,7 +449,8 @@
     }catch(e){}
   }
   function renderLogIntoOverlay(){
-    const arr = JSON.parse(safeStore.get(LOG_KEY) || '[]')
+    let arr = []
+    try{ arr = JSON.parse(safeStore.get(LOG_KEY) || '[]') }catch(e){ arr = [] }
     if(!arr.length){ logList.textContent = 'Geen fouten geregistreerd'; return }
     logList.textContent = arr.map(e => [
       `datum: ${e.datum}`,
@@ -676,8 +712,9 @@
 
     speak('Start', state.friendlyRate, {interrupt:true})
     speak('Tik één', state.numberRate, {interrupt:false})
-    try{ if(state.musicEnabled) await bgm.play() }catch(e){}
+    try{ if(state.musicEnabled) await bgm.play(); else bgm.pause() }catch(e){}
     bgm.volume = state.musicVolume
+    updateMusicButtonUI()
 
     state.lastInteraction = performance.now()
     cancelAnimationFrame(state.runningRAF)
@@ -727,15 +764,24 @@
     renderLogIntoOverlay()
   })
 
+  // Muziekknop
+  musicBtn.addEventListener('click', toggleMusic)
+
   const oncePrime = async () => { await ensureTTSReady(); document.removeEventListener('pointerdown', oncePrime) }
   document.addEventListener('pointerdown', oncePrime, {passive:true})
 
   ;['pointerdown','keydown','touchstart'].forEach(ev => document.addEventListener(ev, () => { state.lastInteraction = performance.now(); hideHelper() }, {passive:true}))
   resize()
-  document.addEventListener('touchmove', e => e.preventDefault(), {passive:false})
+
+  // Laat scrollen in log en in leerkrachtpanel, blokkeer elders
+  document.addEventListener('touchmove', e => {
+    if(e.target.closest('#logOverlay') || e.target.closest('#teacherPanel')) return
+    e.preventDefault()
+  }, {passive:false})
 
   // init
   loadSettings()
+  updateMusicButtonUI()
 })();
 </script>
 </body>
