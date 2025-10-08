@@ -346,8 +346,8 @@
     const jaar = d.getFullYear()
     const uur = pad2(d.getHours())
     const min = pad2(d.getMinutes())
-    // datum als dag-maand-jaar, tijd als uu:mm
-    return { datum: `${dag}-${maand}-${jaar}`, tijd: `${uur}:${min}` }
+    // datum als dag, maand, jaar, tijd als uu:mm
+    return { datum: `${dag},${maand},${jaar}`, tijd: `${uur}:${min}` }
   }
 
   // LOG foutregistratie in gewenst formaat
@@ -660,7 +660,13 @@
   }
 
   // UI events
-  startBtn.addEventListener('click', start)
+  // Spreek eerst "Start", daarna begin het spel met een korte vertraging
+  startBtn.addEventListener('click', async () => {
+    await ensureTTSReady()
+    speak('Start', 1.0)
+    setTimeout(start, 450)
+  })
+
   resetBtn.addEventListener('click', reset)
   speakBtn.addEventListener('click', async () => {
     await ensureTTSReady()
