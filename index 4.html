@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cito LIB – nabouw</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --lib-blue:#1676ff;
+    --lib-blue-700:#0f5bd1;
+    --lib-bg:#f5f7fb;
+    --surface:#ffffff;
+    --ink:#0f172a;
+    --muted:#667085;
+    --kbd:#eef2f7;
+    --accent:#e83b3b;
+    --ring: 0 0 0 4px rgba(22,118,255,.15);
+    --radius:18px;
+  }
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    color:var(--ink);
+    background:var(--lib-bg);
+  }
+  /* Top bar */
+  .bar{
+    position:sticky;top:0;z-index:10;
+    background:var(--lib-blue);
+    color:#fff;
+    display:grid;place-items:center;
+    min-height:64px;
+    padding:12px clamp(12px,2vw,24px);
+    box-shadow:0 2px 6px rgba(0,0,0,.06);
+  }
+  .bar h1{
+    margin:0; text-align:center; font-weight:700; line-height:1.25;
+    font-size:clamp(18px,1.6vw + 12px,28px);
+    max-width:1200px;
+  }
+  /* Main split */
+  .wrap{ max-width:1280px; margin:24px auto; padding:0 clamp(12px,2vw,24px); }
+  .split{
+    display:grid; gap:24px; align-items:start;
+    grid-template-columns: 1fr minmax(280px,420px);
+  }
+  /* Left card */
+  .card{
+    background:var(--surface); border-radius:var(--radius);
+    box-shadow:0 6px 18px rgba(16,24,40,.08);
+    overflow:hidden;
+  }
+  .stage{ position:relative; aspect-ratio: 16/11; display:grid; place-items:center; }
+  .stage canvas, .stage img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .stage-placeholder{ width:100%; height:100%; background:linear-gradient(180deg,#fff,#f0f3f8); display:grid; place-items:center; }
+  .sophie{ width:min(92%,820px); height:auto; }
+  .play{
+    position:absolute; left:18px; bottom:18px; width:56px; height:56px; border-radius:14px;
+    display:grid; place-items:center; background:#fff; box-shadow:0 8px 24px rgba(0,0,0,.14);
+    cursor:pointer; border:1px solid #e5e7eb;
+  }
+  .play svg{ width:28px; height:28px; fill:var(--lib-blue); }
+
+  /* Right panel */
+  .panel{
+    background:var(--surface); border-radius:28px; padding:18px; box-shadow:0 8px 24px rgba(16,24,40,.08);
+  }
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .btn{
+    display:grid; place-items:center; aspect-ratio:1/1; border-radius:1000px; font-size:clamp(20px,2.2vw,28px);
+    background:#fff; border:1px solid #e5e7eb; cursor:pointer; user-select:none; font-weight:700; color:#0b1324;
+    box-shadow:0 2px 0 #e5e7eb inset, 0 2px 8px rgba(16,24,40,.06);
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn.k{ background:#f8fafc; color:#0f172a; }
+  .btn.zero{ grid-column: 1 / span 2; }
+  .btn.back{ background:var(--accent); color:#fff; border-color:#dc2626; }
+  .back svg{ width:30px; height:30px; fill:#fff; }
+  .answer{
+    margin-top:16px; padding:14px 16px; border:2px solid #e5e7eb; border-radius:16px; font-size:20px; color:#111827;
+    display:flex; align-items:center; justify-content:space-between; gap:8px; background:#fff;
+  }
+  .answer input{ border:none; outline:none; font-size:22px; width:100%; }
+
+  /* Bottom nav */
+  .nav{
+    display:flex; align-items:center; justify-content:space-between; gap:12px; margin:22px 0 10px;
+  }
+  .link{ background:#fff; border:1px solid #e5e7eb; padding:10px 16px; border-radius:999px; cursor:pointer; font-weight:600; }
+  .primary{ background:var(--lib-blue); color:#fff; border:none; box-shadow:0 8px 18px rgba(22,118,255,.35); }
+  .primary:active{ transform:translateY(1px); }
+  .steps{ display:flex; gap:10px; align-items:center; }
+  .dot{ width:42px; height:42px; border-radius:999px; background:#fff; border:1px solid #e5e7eb; display:grid; place-items:center; font-weight:600; color:#0b1324; opacity:.75; }
+  .dot.active{ background:var(--lib-blue); color:#fff; border-color:transparent; opacity:1; }
+
+  /* Responsive tweaks */
+  @media (max-width: 980px){
+    .split{ grid-template-columns:1fr; }
+    .panel{ order:2; }
+  }
+  /* Digibord modus: vergroot alle interactie-elementen */
+  @media (min-width: 1600px){
+    .btn{ font-size:36px; }
+    .dot{ width:50px; height:50px; font-size:18px; }
+    .play{ width:68px; height:68px; }
+  }
+</style>
+</head>
+<body>
+  <header class="bar">
+    <h1>Sophie heeft een briefje van tien euro, twee muntjes van twee euro en een muntje van één euro. Hoeveel euro heeft Sophie in totaal</h1>
+  </header>
+
+  <main class="wrap">
+    <section class="split">
+      <!-- LEFT: illustratiekaart -->
+      <article class="card">
+        <div class="stage">
+          <!-- Vervang onderstaande SVG door jouw eigen illustratie als je wilt.  -->
+          <div class="stage-placeholder">
+            <svg class="sophie" viewBox="0 0 1200 820" xmlns="http://www.w3.org/2000/svg" aria-label="Sophie illustratie">
+              <defs>
+                <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#ffffff"/>
+                  <stop offset="100%" stop-color="#f3f5f9"/>
+                </linearGradient>
+              </defs>
+              <rect width="1200" height="820" fill="url(#bg)" />
+              <!-- Sophie -->
+              <circle cx="600" cy="350" r="180" fill="#f6c9a7"/>
+              <ellipse cx="600" cy="600" rx="260" ry="210" fill="#f25c2b"/>
+              <text x="600" y="630" text-anchor="middle" font-family="Inter" font-size="92" font-weight="700" fill="#191f2e">SOPHIE</text>
+              <!-- Tafel -->
+              <rect y="700" width="1200" height="120" fill="#e7b688"/>
+              <!-- Geld -->
+              <rect x="250" y="720" width="380" height="70" rx="6" fill="#f8cada" stroke="#aa7a9a"/>
+              <text x="290" y="765" font-family="Inter" font-size="34" font-weight="700" fill="#8a3a8a">10 EURO</text>
+              <circle cx="770" cy="760" r="36" fill="#cfd8e3" stroke="#9aa7b7"/>
+              <text x="770" y="768" text-anchor="middle" font-family="Inter" font-size="28" font-weight="700" fill="#657084">2€</text>
+              <circle cx="860" cy="760" r="36" fill="#cfd8e3" stroke="#9aa7b7"/>
+              <text x="860" y="768" text-anchor="middle" font-family="Inter" font-size="28" font-weight="700" fill="#657084">2€</text>
+              <circle cx="950" cy="770" r="28" fill="#d9dfeb" stroke="#a6b2c3"/>
+              <text x="950" y="777" text-anchor="middle" font-family="Inter" font-size="22" font-weight="700" fill="#6b7689">1€</text>
+            </svg>
+          </div>
+          <button class="play" aria-label="Speel vraag af" title="Speel vraag af">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7z"/></svg>
+          </button>
+        </div>
+      </article>
+
+      <!-- RIGHT: toetsenblok + antwoord -->
+      <aside class="panel">
+        <div class="grid" id="keypad" aria-label="Toetsenblok">
+          <button class="btn k" data-k="1">1</button>
+          <button class="btn k" data-k="2">2</button>
+          <button class="btn k" data-k="3">3</button>
+          <button class="btn k" data-k="4">4</button>
+          <button class="btn k" data-k="5">5</button>
+          <button class="btn k" data-k="6">6</button>
+          <button class="btn k" data-k="7">7</button>
+          <button class="btn k" data-k="8">8</button>
+          <button class="btn k" data-k="9">9</button>
+          <button class="btn k zero" data-k="0">0</button>
+          <button class="btn back" aria-label="Wissen" title="Wissen" data-k="back">
+            <svg viewBox="0 0 24 24"><path d="M20 5H9L3 12l6 7h11a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1zm-1 12H9.83L5.17 12l4.66-5H19v10zm-8-2 5-3-5-3v6z"/></svg>
+          </button>
+        </div>
+        <label class="answer" for="ans">
+          <input id="ans" inputmode="numeric" autocomplete="off" placeholder="Antwoordvak" aria-label="Antwoord" />
+          <span>€</span>
+        </label>
+      </aside>
+    </section>
+
+    <!-- Bottom navigation -->
+    <nav class="nav" aria-label="Navigatie">
+      <button class="link" id="prev">Vorige</button>
+      <div class="steps" role="tablist" aria-label="Stappen">
+        <div class="dot active" role="tab" aria-selected="true">1</div>
+        <div class="dot" role="tab">2</div>
+        <div class="dot" role="tab">3</div>
+        <div class="dot" role="tab">4</div>
+        <div class="dot" role="tab">5</div>
+      </div>
+      <button class="link primary" id="next">Volgende</button>
+    </nav>
+  </main>
+
+<script>
+  const ans = document.querySelector('#ans');
+  const keypad = document.querySelector('#keypad');
+  keypad.addEventListener('click', e =>{
+    const k = e.target.closest('button')?.dataset.k;
+    if(!k) return;
+    if(k === 'back'){ ans.value = ans.value.slice(0,-1); return; }
+    if(ans.value.length >= 3) return; // maximaal 3 tekens
+    ans.value += k;
+  });
+  // Voorbeeldvalidatie: 10 + 2 + 2 + 1 = 15
+  const correct = '15';
+  const next = document.querySelector('#next');
+  next.addEventListener('click', () =>{
+    ans.classList.remove('ok','nok');
+    if(ans.value === correct){
+      next.textContent = 'Goed, volgende';
+      next.style.background = '#22c55e';
+      next.style.boxShadow = '0 8px 18px rgba(34,197,94,.35)';
+    }else{
+      next.textContent = 'Probeer opnieuw';
+      next.style.background = 'var(--lib-blue)';
+      next.style.boxShadow = '0 8px 18px rgba(22,118,255,.35)';
+      ans.focus();
+    }
+  });
+</script>
+</body>
+</html>
