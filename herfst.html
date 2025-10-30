@@ -9,9 +9,6 @@
     --bg1:#fff2e0;
     --bg2:#ffe9c7;
     --ink:#22160c;
-    --leaf-edge:#d07b00;
-    --leaf-vein:#b86100;
-    --glow:rgba(255,255,255,.85);
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:rgba(0,0,0,0) }
   html,body{ margin:0; height:100%; background:#fff; color:var(--ink);
@@ -49,7 +46,7 @@
     background: radial-gradient(circle at 30% 30%, #ffffff, #fcefd9 70%);
     box-shadow: 0 6px 16px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.9); cursor:pointer }
 
-  /* blaadje */
+  /* blaadje met afbeelding blad.png */
   .leaf{
     position:absolute; display:grid; place-items:center;
     font-weight:1000; font-size:clamp(38px, 6.6vmin, 64px); color:#3a2500;
@@ -57,7 +54,7 @@
     will-change:transform; user-select:none; -webkit-user-select:none; transition:transform .16s ease;
   }
   .leaf .num{ position:absolute; z-index:2; text-shadow: 0 2px 6px rgba(0,0,0,.15) }
-  .leaf svg{ position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none }
+  .leaf img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none }
   .leaf .shadow{ position:absolute; inset:-12%; border-radius:20px; filter:blur(14px); background:rgba(0,0,0,.10); z-index:0; pointer-events:none }
 
   .pop{ animation: pop .33s cubic-bezier(.2,.9,.2,1) forwards }
@@ -243,7 +240,7 @@
     maxWave:10,
     leaves:[],
     velocities:[],
-    rots:[],
+    rotSpeeds:[],
     jerkMeta:new Map(),
     runningRAF:0,
     lastTime:0,
@@ -468,23 +465,6 @@
     return false
   }
 
-  function leafSVG(fill1, fill2){
-    return `
-    <svg viewBox="0 0 180 180" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-      <defs>
-        <radialGradient id="g${Math.floor(Math.random()*1e6)}" cx="40%" cy="35%" r="70%">
-          <stop offset="0%" stop-color="${fill1}"/>
-          <stop offset="100%" stop-color="${fill2}"/>
-        </radialGradient>
-      </defs>
-      <path d="M88 170c-6-26-16-39-34-54-22-18-38-45-23-69 12-19 35-26 56-17 7-10 17-17 30-18 17-1 34 11 37 28 4 20-10 38-25 49-13 9-23 19-29 36-6 16-5 32-12 45z"
-        fill="url(#g${Math.floor(Math.random()*1e6)})" stroke="var(--leaf-edge)" stroke-width="3" />
-      <path d="M90 168 C 88 128 84 106 64 86 M90 130 C 86 122 78 114 68 108 M96 120 C 102 112 110 106 120 100"
-        fill="none" stroke="var(--leaf-vein)" stroke-width="2" opacity=".8"/>
-      <rect x="87" y="165" width="5" height="12" fill="var(--leaf-vein)" rx="2"/>
-    </svg>`
-  }
-
   function createLeaf(n){
     const el = document.createElement('div')
     el.className = 'leaf'
@@ -494,7 +474,7 @@
     el.style.width = size + 'px'; el.style.height = size + 'px'
     el.style.zIndex = String(1000 - n)
     el.dataset.num = n
-    el.innerHTML = `<div class="shadow"></div><div class="num">${n}</div>${leafSVG('#ffd86a','#ff9a3c')}`
+    el.innerHTML = `<div class="shadow"></div><div class="num">${n}</div><img src="blad.png" alt="">`
 
     const W = app.clientWidth, H = app.clientHeight, pad = 16
     let x = rand(pad, Math.max(pad, W - size)), y = rand(pad + 70, Math.max(pad + 70, H - size)), tries = 0
@@ -512,13 +492,13 @@
     const rs = rand(-30, 30)
 
     app.appendChild(el)
-    state.leaves.push(el); state.velocities.push(v); state.rots.push(rs)
+    state.leaves.push(el); state.velocities.push(v); state.rotSpeeds.push(rs)
     state.jerkMeta.set(el, { nextJerk: performance.now() + rand(300, 800) })
   }
 
   function clearLeaves(){
     for(const b of state.leaves){ b.removeEventListener('pointerdown', onLeafTap); b.remove() }
-    state.leaves = []; state.velocities = []; state.rots = []; state.jerkMeta.clear()
+    state.leaves = []; state.velocities = []; state.rotSpeeds = []; state.jerkMeta.clear()
   }
 
   function createWaveLeaves(){
@@ -577,7 +557,7 @@
     el.classList.add('pop')
     el.addEventListener('animationend', () => {
       const idx = state.leaves.indexOf(el)
-      if(idx >= 0){ state.leaves.splice(idx, 1); state.velocities.splice(idx, 1); state.rots.splice(idx, 1); state.jerkMeta.delete(el) }
+      if(idx >= 0){ state.leaves.splice(idx, 1); state.velocities.splice(idx, 1); state.rotSpeeds.splice(idx, 1); state.jerkMeta.delete(el) }
       el.remove()
       state.requiredNext += 1
       if(state.leaves.length === 0){
@@ -604,7 +584,7 @@
       el.style.width = size + 'px'; el.style.height = size + 'px'
       el.style.zIndex = String(1000 - n)
       el.dataset.num = n
-      el.innerHTML = `<div class="shadow"></div><div class="num">${n}</div>${leafSVG('#ffd86a','#ff9a3c')}`
+      el.innerHTML = `<div class="shadow"></div><div class="num">${n}</div><img src="blad.png" alt="">`
 
       let targetX = rand(pad, Math.max(pad, W - size))
       let targetY = rand(pad + 70, Math.max(pad + 70, H - size))
@@ -628,7 +608,7 @@
       const rs = rand(-30, 30)
 
       app.appendChild(el)
-      state.leaves.push(el); state.velocities.push(v); state.rots.push(rs); state.jerkMeta.set(el, { nextJerk: performance.now() + rand(300, 800) })
+      state.leaves.push(el); state.velocities.push(v); state.rotSpeeds.push(rs); state.jerkMeta.set(el, { nextJerk: performance.now() + rand(300, 800) })
 
       requestAnimationFrame(() => {
         el.style.transition = 'transform .9s cubic-bezier(.2,.9,.2,1)'
@@ -685,16 +665,28 @@
         }
       }
 
+      // zachte zwaartekracht en wind
       v.vy += 8 * dt
       v.vx += wind * 0.2 * dt
-      r += state.rots[i] * dt
 
-      x += v.vx * dt; y += v.vy * dt
+      // snelheidslimiet om doorschieten te voorkomen
+      const vmax = Math.max(28, state.maxSpeed * 1.4)
+      v.vx = clampNum(v.vx, -vmax, vmax)
+      v.vy = clampNum(v.vy, -vmax, vmax)
 
-      if(x <= 0){ x = 0; v.vx = Math.abs(v.vx)*0.98 }
-      if(x + s >= W){ x = W - s; v.vx = -Math.abs(v.vx)*0.98 }
-      if(y <= 0){ y = 0; v.vy = Math.abs(v.vy)*0.98 }
-      if(y + s >= H){ y = H - s; v.vy = -Math.abs(v.vy)*0.75 } // lichte stuiter
+      // beperkte tuimelrotatie, maximaal 40 graden
+      r += state.rotSpeeds[i] * dt
+      if(r > 40){ r = 40; state.rotSpeeds[i] *= -1 }
+      if(r < -40){ r = -40; state.rotSpeeds[i] *= -1 }
+
+      x += v.vx * dt
+      y += v.vy * dt
+
+      // WRAP aan randen, geen stuiter
+      if(x > W){ x = -s + 1 }
+      if(x + s < 0){ x = W - 1 }
+      if(y > H){ y = -s + 1 }
+      if(y + s < 0){ y = H - 1 }
 
       el.dataset.x = x; el.dataset.y = y; el.dataset.rot = r
       setTransform(el, x, y, r)
