@@ -554,10 +554,15 @@
     return false
   }
 
+  function currentMaxNumber(){
+    return Math.min(state.maxWave, state.minNumber + state.wave - 1)
+  }
+
   function createWaveBubbles(){
     clearBubbles()
     const W = app.clientWidth, H = app.clientHeight, pad = 16
-    for(let n=state.minNumber; n<=state.maxWave; n++){
+    const endNumber = currentMaxNumber()
+    for(let n=state.minNumber; n<=endNumber; n++){
       const el = document.createElement('div')
       el.className = 'bubble'; el.textContent = n; el.dataset.num = n
       const baseMin = Math.max(110, Math.min(innerWidth, innerHeight) * 0.16)
@@ -612,7 +617,6 @@
   }
 
   async function onBubbleTap(e){
-    await ensureTTSReady()
     const el = e.currentTarget
     const n = parseInt(el.dataset.num, 10)
     if(!state.bubbles.includes(el)) return
@@ -621,44 +625,44 @@
 
     if(!correct){
       logError(state.wave, state.requiredNext, n)
-      speak(`Oeps, begin opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
       showToast(`Fout, begin opnieuw bij ${state.minNumber}`)
       restartCurrentWaveWithoutTeleport()
+      await ensureTTSReady()
+      speak(`Oeps, begin opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
       return
     }
 
     const nextAfterTap = state.requiredNext + 1
     state.requiredNext = nextAfterTap
 
-    speak(word(n), state.numberRate, {interrupt:true})
-
     const rect = el.getBoundingClientRect()
-    burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
 
-    el.classList.add('pop')
     el.addEventListener('animationend', () => {
       const idx = state.bubbles.indexOf(el)
       if(idx >= 0){ state.bubbles.splice(idx, 1); state.velocities.splice(idx, 1); state.jerkMeta.delete(el) }
       el.remove()
       if(state.bubbles.length === 0){
         setTimeout(() => {
-          state.requiredNext = state.minNumber
-          showToast('Nog een keer')
-          speak('Nog een keer', state.friendlyRate, {interrupt:true})
-          createWaveBubbles()
-          badge.textContent = `Tik de cijfers op volgorde van ${state.minNumber} tot en met ${state.maxWave}`
+          nextWave()
         }, state.interLevelDelay * 1000)
       }else{
         enforceStacking()
       }
     }, {once:true})
+
+    el.classList.add('pop')
+    burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
+
+    await ensureTTSReady()
+    speak(word(n), state.numberRate, {interrupt:true})
   }
 
   function restartCurrentWaveWithoutTeleport(){
-    const have = new Set(state.bubbles.map(b => parseInt(b.dataset.num,10)))
+    const have = new Set(state.bubbles.filter(b => !b.classList.contains('pop')).map(b => parseInt(b.dataset.num,10)))
     state.requiredNext = state.minNumber
     const missing = []
-    for(let n=state.minNumber; n<=state.maxWave; n++){ if(!have.has(n)) missing.push(n) }
+    const endNumber = currentMaxNumber()
+    for(let n=state.minNumber; n<=endNumber; n++){ if(!have.has(n)) missing.push(n) }
 
     const W = app.clientWidth, H = app.clientHeight, pad = 16
     for(const n of missing){
@@ -709,20 +713,23 @@
   }
 
   function nextWave(){
-    setPastelForWave(state.wave + 1)
     state.wave += 1
-    if(state.wave > state.maxWave){
-      state.wave = state.maxWave
+
+    if(state.minNumber + state.wave - 1 > state.maxWave){
+      state.wave = 1
       showToast(`We beginnen opnieuw bij ${state.minNumber}`)
       speak(`We beginnen opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
     }else{
-      showToast(`Nu tot en met ${state.wave}`)
-      speak(`Nu tot en met ${word(state.wave)}`, state.friendlyRate, {interrupt:true})
+      const endNumber = currentMaxNumber()
+      showToast(`Nu tot en met ${endNumber}`)
+      speak(`Nu tot en met ${word(endNumber)}`, state.friendlyRate, {interrupt:true})
     }
+
     state.moving = state.wave >= 2
     state.requiredNext = state.minNumber
+    setPastelForWave(state.wave)
     createWaveBubbles()
-    badge.textContent = `Tik de cijfers op volgorde van ${state.minNumber} tot en met ${state.maxWave}`
+    badge.textContent = `Tik de cijfers op volgorde`
     state.lastInteraction = performance.now()
   }
 
@@ -772,9 +779,9 @@
     resize()
     await ensureTTSReady()
 
-    state.wave = state.maxWave; state.requiredNext = state.minNumber; state.moving = true
-    setPastelForWave(state.minNumber); clearBubbles(); createWaveBubbles()
-    badge.textContent = `Tik de cijfers op volgorde van ${state.minNumber} tot en met ${state.maxWave}`
+    state.wave = 1; state.requiredNext = state.minNumber; state.moving = false
+    setPastelForWave(state.wave); clearBubbles(); createWaveBubbles()
+    badge.textContent = `Tik de cijfers op volgorde`
     startOverlay.classList.add('hidden')
 
     speak('Start', state.friendlyRate, {interrupt:true})
@@ -819,7 +826,8 @@
   })
   vraagBtn.addEventListener('click', async () => {
     await ensureTTSReady()
-    speak(`Tik de cijfers op volgorde van ${word(state.minNumber)} tot en met ${word(state.maxWave)}`, state.friendlyRate, {interrupt:true})
+    const endNumber = currentMaxNumber()
+    speak(`Tik de cijfers op volgorde van ${word(state.minNumber)} tot en met ${word(endNumber)}`, state.friendlyRate, {interrupt:true})
   })
 
   teacherBtn.addEventListener('click', openTeacherPanelSecure)
