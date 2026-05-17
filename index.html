@@ -56,7 +56,7 @@
     box-shadow: 0 8px 18px rgba(48,83,33,.26), inset 0 1px 0 rgba(255,255,255,.55); cursor:pointer }
 
   .bubble{
-    position:absolute; display:grid; place-items:center; border-radius:9999px;
+    position:absolute; z-index:1000; display:grid; place-items:center; border-radius:9999px;
     font-weight:1000; font-size:clamp(38px, 6.6vmin, 64px); color:#10334b; text-shadow:0 2px 2px rgba(255,255,255,.85), 0 0 8px rgba(255,255,255,.75);
     background-image: radial-gradient(circle at 30% 22%, rgba(255,255,255,.96) 0 10%, rgba(255,255,255,.46) 11% 20%, transparent 21%),
       radial-gradient(circle at 70% 78%, rgba(132,218,255,.35), transparent 35%),
@@ -92,13 +92,13 @@
     padding:10px 14px; background: rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.06); color:var(--ink); border-radius:12px; font-weight:900; font-size:14px; opacity:0; transition: opacity .25s ease; pointer-events:none }
   #toast.show{ opacity:1 }
 
-  .teacher-toggle{ position:absolute; left:12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display:flex; gap:8px; z-index:5 }
+  .teacher-toggle{ position:absolute; left:12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display:flex; gap:8px; z-index:3000 }
   .chip{ border:1px solid rgba(89,125,43,.35); background: linear-gradient(180deg, rgba(248,255,229,.95), rgba(177,218,112,.92));
     color:#31551c; box-shadow:0 5px 12px rgba(42,68,24,.18); padding:8px 12px; border-radius:9999px; font-weight:900; cursor:pointer }
 
   .panel{ position:absolute; left:12px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); width: min(92vw, 440px); color:#2c4f19;
     background-color:rgba(250,255,229,.96); background-image:linear-gradient(rgba(255,255,255,.78), rgba(247,255,218,.88)), url("assets/instellingen.png");
-    background-size:cover; background-position:center; border:2px solid rgba(112,153,58,.38); border-radius:22px; box-shadow: 0 12px 30px rgba(34,64,22,.22); padding:14px; display:none; z-index:8 }
+    background-size:cover; background-position:center; border:2px solid rgba(112,153,58,.38); border-radius:22px; box-shadow: 0 12px 30px rgba(34,64,22,.22); padding:14px; display:none; z-index:4000 }
   .panel.show{ display:block }
   .panel h3{ margin:6px 6px 10px; font-size:18px; text-shadow:0 1px 0 rgba(255,255,255,.8) }
   .row{ display:flex; align-items:center; gap:10px; margin:10px 6px }
