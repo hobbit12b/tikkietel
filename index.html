@@ -598,6 +598,7 @@
     const el = e.currentTarget
     const n = parseInt(el.dataset.num, 10)
     if(!state.bubbles.includes(el)) return
+    if(el.classList.contains('pop')) return
     const correct = n === state.requiredNext
 
     if(!correct){
@@ -608,7 +609,10 @@
       return
     }
 
-    speak(word(n), state.numberRate, {interrupt:false})
+    const nextAfterTap = state.requiredNext + 1
+    state.requiredNext = nextAfterTap
+
+    speak(word(n), state.numberRate, {interrupt:true})
 
     const rect = el.getBoundingClientRect()
     burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
@@ -618,7 +622,6 @@
       const idx = state.bubbles.indexOf(el)
       if(idx >= 0){ state.bubbles.splice(idx, 1); state.velocities.splice(idx, 1); state.jerkMeta.delete(el) }
       el.remove()
-      state.requiredNext += 1
       if(state.bubbles.length === 0){
         setTimeout(nextWave, state.interLevelDelay * 1000)
       }else{
