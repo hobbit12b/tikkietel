@@ -86,9 +86,9 @@
   .panel.show{ display:block }
   .panel h3{ margin:6px 6px 10px; font-size:16px }
   .row{ display:flex; align-items:center; gap:10px; margin:10px 6px }
-  .row label{ width:160px; font-weight:800; font-size:14px }
+  .row label{ width:150px; font-weight:800; font-size:14px }
   .row input[type="range"]{ flex:1 }
-  .row input[type="number"]{ width:90px; padding:6px 8px; border-radius:10px; border:1px solid rgba(0,0,0,.15) }
+  .row input[type="number"]{ width:110px; padding:6px 8px; border-radius:10px; border:1px solid rgba(0,0,0,.15) }
   .panel .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px }
   .panel button{ padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.1); background: rgba(0,0,0,.06); font-weight:900; cursor:pointer }
 
@@ -157,7 +157,7 @@
 
     <div class="panel" id="teacherPanel" role="dialog" aria-label="Leerkracht instellingen">
       <h3>Instellingen</h3>
-      <div class="row"><label for="maxWave">Maximaal cijfer</label><input id="maxWave" type="number" min="3" max="20" step="1" /></div>
+      <div class="row"><label for="maxWave">Maximaal cijfer</label><input id="maxWave" type="number" min="3" max="100" step="1" /></div>
       <div class="row"><label for="delay">Tijd tussen levels, seconden</label><input id="delay" type="number" min="0" max="5" step="0.1" /></div>
       <div class="row"><label>Snelheid bubbels</label><input id="minSpeed" type="range" min="4" max="40" step="1" /><input id="maxSpeed" type="range" min="6" max="50" step="1" /></div>
       <div class="row"><label for="vol">Volume stem</label><input id="vol" type="range" min="0" max="1" step="0.05" /></div>
@@ -229,7 +229,15 @@
     ['#fff4cc','#fff9e6'], ['#f3e8ff','#f9f2ff'], ['#eaf7ff','#f5fbff'],
     ['#ffe9f2','#fff3f8'], ['#e9fff5','#f3fffa'], ['#fff0e6','#fff7f2'], ['#eef7ff','#f6fbff']
   ]
-  const NUM_WORDS_NL = {0:'nul',1:'één',2:'twee',3:'drie',4:'vier',5:'vijf',6:'zes',7:'zeven',8:'acht',9:'negen',10:'tien',11:'elf',12:'twaalf',13:'dertien',14:'veertien',15:'vijftien',16:'zestien',17:'zeventien',18:'achttien',19:'negentien',20:'twintig'}
+  const NUM_WORDS_NL = {
+    0:'nul', 1:'één', 2:'twee', 3:'drie', 4:'vier', 5:'vijf',
+    6:'zes', 7:'zeven', 8:'acht', 9:'negen', 10:'tien',
+    11:'elf', 12:'twaalf', 13:'dertien', 14:'veertien',
+    15:'vijftien', 16:'zestien', 17:'zeventien', 18:'achttien',
+    19:'negentien', 20:'twintig', 30:'dertig', 40:'veertig',
+    50:'vijftig', 60:'zestig', 70:'zeventig', 80:'tachtig',
+    90:'negentig', 100:'honderd'
+  }
 
   const SETTINGS_KEY = 'kleuter_cijferpop_settings'
   const LOG_KEY = 'kleuter_cijferpop_log'
@@ -323,7 +331,15 @@
     const fem = nl.filter(v => isFemaleName(v.name))
     return fem[0] || nl[0] || vs.find(v => isFemaleName(v.name)) || vs[0] || null
   }
-  function word(n){ return NUM_WORDS_NL[n] || String(n) }
+  function word(n){
+    if(NUM_WORDS_NL[n]) return NUM_WORDS_NL[n]
+    if(n > 20 && n < 100){
+      const ones = n % 10
+      const tens = n - ones
+      return `${NUM_WORDS_NL[ones]}ën${NUM_WORDS_NL[tens]}`
+    }
+    return String(n)
+  }
 
   async function ensureTTSReady(){
     if(state.voicePrimed && state.voicesLoaded) return
@@ -419,7 +435,7 @@
     updateMusicButtonUI()
   }
   function saveSettings(){
-    state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 20)
+    state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 100)
     state.interLevelDelay = clampNum(parseFloat(inputDelay.value), 0, 5)
     state.minSpeed = clampNum(parseFloat(inputMinSpeed.value), 2, 40)
     state.maxSpeed = clampNum(parseFloat(inputMaxSpeed.value), state.minSpeed+1, 50)
