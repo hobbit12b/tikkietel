@@ -158,6 +158,7 @@
     <div class="panel" id="teacherPanel" role="dialog" aria-label="Leerkracht instellingen">
       <h3>Instellingen</h3>
       <div class="row"><label for="maxWave">Maximaal cijfer</label><input id="maxWave" type="number" min="3" max="100" step="1" /></div>
+      <div class="row"><label for="minNumber">Minimumcijfer</label><input id="minNumber" type="range" min="1" max="100" step="1" /><span id="minNumberValue">1</span></div>
       <div class="row"><label for="delay">Tijd tussen levels, seconden</label><input id="delay" type="number" min="0" max="5" step="0.1" /></div>
       <div class="row"><label>Snelheid bubbels</label><input id="minSpeed" type="range" min="4" max="40" step="1" /><input id="maxSpeed" type="range" min="6" max="50" step="1" /></div>
       <div class="row"><label for="vol">Volume stem</label><input id="vol" type="range" min="0" max="1" step="0.05" /></div>
@@ -206,6 +207,8 @@
   const saveTeacher = document.getElementById('saveTeacher')
   const closeTeacher = document.getElementById('closeTeacher')
   const inputMaxWave = document.getElementById('maxWave')
+  const inputMinNumber = document.getElementById('minNumber')
+  const minNumberValue = document.getElementById('minNumberValue')
   const inputDelay = document.getElementById('delay')
   const inputMinSpeed = document.getElementById('minSpeed')
   const inputMaxSpeed = document.getElementById('maxSpeed')
@@ -268,6 +271,7 @@
     wave:1,
     requiredNext:1,
     maxWave:10,
+    minNumber:1,
     bubbles:[],
     velocities:[],
     jerkMeta:new Map(),
@@ -402,6 +406,7 @@
     }catch(e){}
     writeJSON(SETTINGS_KEY, {
       maxWave: state.maxWave,
+      minNumber: state.minNumber,
       interLevelDelay: state.interLevelDelay,
       minSpeed: state.minSpeed,
       maxSpeed: state.maxSpeed,
@@ -418,6 +423,7 @@
       const s = readJSON(SETTINGS_KEY, null)
       if(s){
         if(typeof s.maxWave === 'number') state.maxWave = s.maxWave
+        if(typeof s.minNumber === 'number') state.minNumber = s.minNumber
         if(typeof s.interLevelDelay === 'number') state.interLevelDelay = s.interLevelDelay
         if(typeof s.minSpeed === 'number') state.minSpeed = s.minSpeed
         if(typeof s.maxSpeed === 'number') state.maxSpeed = s.maxSpeed
@@ -426,7 +432,12 @@
         if(typeof s.musicEnabled === 'boolean') state.musicEnabled = s.musicEnabled
       }
     }catch(e){}
+    state.maxWave = clampInt(state.maxWave, 3, 100)
+    state.minNumber = clampInt(state.minNumber, 1, state.maxWave)
     inputMaxWave.value = state.maxWave
+    inputMinNumber.max = state.maxWave
+    inputMinNumber.value = state.minNumber
+    minNumberValue.textContent = state.minNumber
     inputDelay.value = state.interLevelDelay
     inputMinSpeed.value = state.minSpeed
     inputMaxSpeed.value = state.maxSpeed
@@ -436,6 +447,12 @@
   }
   function saveSettings(){
     state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 100)
+    state.minNumber = clampInt(parseInt(inputMinNumber.value,10), 1, state.maxWave)
+    if(state.minNumber > state.maxWave) state.minNumber = state.maxWave
+    inputMaxWave.value = state.maxWave
+    inputMinNumber.max = state.maxWave
+    inputMinNumber.value = state.minNumber
+    minNumberValue.textContent = state.minNumber
     state.interLevelDelay = clampNum(parseFloat(inputDelay.value), 0, 5)
     state.minSpeed = clampNum(parseFloat(inputMinSpeed.value), 2, 40)
     state.maxSpeed = clampNum(parseFloat(inputMaxSpeed.value), state.minSpeed+1, 50)
@@ -444,6 +461,7 @@
     applyMusicSettings()
     writeJSON(SETTINGS_KEY, {
       maxWave: state.maxWave,
+      minNumber: state.minNumber,
       interLevelDelay: state.interLevelDelay,
       minSpeed: state.minSpeed,
       maxSpeed: state.maxSpeed,
@@ -539,7 +557,7 @@
   function createWaveBubbles(){
     clearBubbles()
     const W = app.clientWidth, H = app.clientHeight, pad = 16
-    for(let n=1; n<=state.wave; n++){
+    for(let n=state.minNumber; n<=state.maxWave; n++){
       const el = document.createElement('div')
       el.className = 'bubble'; el.textContent = n; el.dataset.num = n
       const baseMin = Math.max(110, Math.min(innerWidth, innerHeight) * 0.16)
@@ -603,8 +621,8 @@
 
     if(!correct){
       logError(state.wave, state.requiredNext, n)
-      speak('Oeps, begin opnieuw bij één', state.friendlyRate, {interrupt:true})
-      showToast('Fout, begin opnieuw bij 1')
+      speak(`Oeps, begin opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
+      showToast(`Fout, begin opnieuw bij ${state.minNumber}`)
       restartCurrentWaveWithoutTeleport()
       return
     }
@@ -623,7 +641,13 @@
       if(idx >= 0){ state.bubbles.splice(idx, 1); state.velocities.splice(idx, 1); state.jerkMeta.delete(el) }
       el.remove()
       if(state.bubbles.length === 0){
-        setTimeout(nextWave, state.interLevelDelay * 1000)
+        setTimeout(() => {
+          state.requiredNext = state.minNumber
+          showToast('Nog een keer')
+          speak('Nog een keer', state.friendlyRate, {interrupt:true})
+          createWaveBubbles()
+          badge.textContent = `Tik de cijfers op volgorde van ${state.minNumber} tot en met ${state.maxWave}`
+        }, state.interLevelDelay * 1000)
       }else{
         enforceStacking()
       }
@@ -632,9 +656,9 @@
 
   function restartCurrentWaveWithoutTeleport(){
     const have = new Set(state.bubbles.map(b => parseInt(b.dataset.num,10)))
-    state.requiredNext = 1
+    state.requiredNext = state.minNumber
     const missing = []
-    for(let n=1; n<=state.wave; n++){ if(!have.has(n)) missing.push(n) }
+    for(let n=state.minNumber; n<=state.maxWave; n++){ if(!have.has(n)) missing.push(n) }
 
     const W = app.clientWidth, H = app.clientHeight, pad = 16
     for(const n of missing){
@@ -679,7 +703,7 @@
       })
     }
 
-    badge.textContent = `Tik de cijfers op volgorde, begin met 1`
+    badge.textContent = `Tik de cijfers op volgorde, begin met ${state.minNumber}`
     enforceStacking()
     state.lastInteraction = performance.now()
   }
@@ -688,17 +712,17 @@
     setPastelForWave(state.wave + 1)
     state.wave += 1
     if(state.wave > state.maxWave){
-      state.wave = 1
-      showToast('We beginnen opnieuw bij 1')
-      speak('We beginnen opnieuw bij één', state.friendlyRate, {interrupt:true})
+      state.wave = state.maxWave
+      showToast(`We beginnen opnieuw bij ${state.minNumber}`)
+      speak(`We beginnen opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
     }else{
       showToast(`Nu tot en met ${state.wave}`)
       speak(`Nu tot en met ${word(state.wave)}`, state.friendlyRate, {interrupt:true})
     }
     state.moving = state.wave >= 2
-    state.requiredNext = 1
+    state.requiredNext = state.minNumber
     createWaveBubbles()
-    badge.textContent = `Tik de cijfers op volgorde tot en met ${state.wave}`
+    badge.textContent = `Tik de cijfers op volgorde van ${state.minNumber} tot en met ${state.maxWave}`
     state.lastInteraction = performance.now()
   }
 
@@ -748,13 +772,13 @@
     resize()
     await ensureTTSReady()
 
-    state.wave = 1; state.requiredNext = 1; state.moving = false
-    setPastelForWave(1); clearBubbles(); createWaveBubbles()
-    badge.textContent = 'Tik het getal op volgorde'
+    state.wave = state.maxWave; state.requiredNext = state.minNumber; state.moving = true
+    setPastelForWave(state.minNumber); clearBubbles(); createWaveBubbles()
+    badge.textContent = `Tik de cijfers op volgorde van ${state.minNumber} tot en met ${state.maxWave}`
     startOverlay.classList.add('hidden')
 
     speak('Start', state.friendlyRate, {interrupt:true})
-    speak('Tik één', state.numberRate, {interrupt:false})
+    speak(`Tik ${word(state.minNumber)}`, state.numberRate, {interrupt:false})
     try{ if(state.musicEnabled) await bgm.play(); else bgm.pause() }catch(e){}
     bgm.volume = state.musicVolume
     updateMusicButtonUI()
@@ -782,9 +806,20 @@
 
   startBtn.addEventListener('click', async () => { await ensureTTSReady(); start() })
   nogeensBtn.addEventListener('click', reset)
+  inputMinNumber.addEventListener('input', () => {
+    minNumberValue.textContent = inputMinNumber.value
+  })
+  inputMaxWave.addEventListener('input', () => {
+    const max = clampInt(parseInt(inputMaxWave.value,10), 3, 100)
+    inputMinNumber.max = max
+    if(parseInt(inputMinNumber.value,10) > max){
+      inputMinNumber.value = max
+    }
+    minNumberValue.textContent = inputMinNumber.value
+  })
   vraagBtn.addEventListener('click', async () => {
     await ensureTTSReady()
-    speak(`Tik de cijfers op volgorde tot en met ${word(state.wave)}`, state.friendlyRate, {interrupt:true})
+    speak(`Tik de cijfers op volgorde van ${word(state.minNumber)} tot en met ${word(state.maxWave)}`, state.friendlyRate, {interrupt:true})
   })
 
   teacherBtn.addEventListener('click', openTeacherPanelSecure)
