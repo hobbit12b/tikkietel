@@ -35,16 +35,15 @@
   @keyframes float{ 0%{transform:translate3d(-10%,-10%,0)} 50%{transform:translate3d(10%,8%,0)} 100%{transform:translate3d(-10%,-10%,0)} }
 
   .ui{ position:absolute; left:0; right:0; top: env(safe-area-inset-top, 0px);
-    display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px }
-  .badge{ min-width:min(64vw, 520px); min-height:58px; padding:14px 38px 17px; display:grid; place-items:center; text-align:center;
-    color:#fff8df; text-shadow:0 2px 3px rgba(73,43,13,.8), 0 0 8px rgba(255,244,190,.55);
-    background-image:url("assets/voortgang.png"); background-size:100% 100%; background-position:center; background-repeat:no-repeat;
-    font-weight:1000; font-size:clamp(16px, 2.6vmin, 24px) }
+    display:flex; align-items:center; justify-content:flex-end; gap:12px; padding:12px 16px }
+  .badge{ display:none }
 
   .controls{ display:flex; gap:10px }
-  .imgbtn{ width:58px; height:58px; border-radius:18px; border:0; padding:7px; background:rgba(255,255,255,.20);
+  .imgbtn{ position:relative; width:58px; height:58px; border-radius:18px; border:0; padding:7px; background:rgba(255,255,255,.20);
     box-shadow: 0 8px 16px rgba(54,78,31,.22), inset 0 1px 0 rgba(255,255,255,.72); cursor:pointer; display:grid; place-items:center }
   .imgbtn img{ width:100%; height:100%; display:block; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(35,51,20,.28)) }
+  .imgbtn.music-off img{ opacity:.42 }
+  .imgbtn.music-off::after{ content:""; position:absolute; width:42px; height:6px; border-radius:999px; background:#b3261e; box-shadow:0 1px 2px rgba(255,255,255,.8), 0 2px 4px rgba(50,30,20,.25); transform:rotate(-45deg); pointer-events:none }
 
   #startOverlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px;
     background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(211,232,179,.38)); backdrop-filter: blur(3px); text-align:center }
@@ -84,12 +83,10 @@
   .dot{ position:absolute; width:12px; height:12px; border-radius:9999px; opacity:.95; transform: translate(-50%,-50%) scale(1); animation: dot .55s ease-out forwards }
   @keyframes dot{ to{ transform: translate(var(--dx), var(--dy)) scale(.8); opacity:0 } }
 
-  .helper{ position:absolute; left:18px; bottom:calc(64px + env(safe-area-inset-bottom, 0px)); width:clamp(110px, 19vmin, 180px); min-height:92px;
-    pointer-events:none; opacity:.98; transition: opacity .25s ease; z-index:4; display:flex; align-items:flex-end; gap:8px }
+  .helper{ position:absolute; left:18px; bottom:calc(64px + env(safe-area-inset-bottom, 0px)); width:clamp(72px, 13vmin, 128px); min-height:92px;
+    pointer-events:none; opacity:.98; transition: opacity .25s ease; z-index:4; display:flex; align-items:flex-end }
   .helper.show{ opacity:.98 }
   .helper img{ width:clamp(72px, 13vmin, 128px); height:auto; filter:drop-shadow(0 8px 8px rgba(38,59,20,.28)) }
-  .helper .helper-text{ align-self:flex-start; margin-top:2px; padding:8px 10px; border-radius:18px 18px 18px 6px; background:rgba(255,253,229,.92);
-    border:2px solid rgba(119,155,63,.45); color:#41651f; font-weight:1000; font-size:clamp(13px, 2vmin, 17px); box-shadow:0 5px 12px rgba(47,70,27,.16); white-space:nowrap }
 
   #toast{ position:absolute; left:50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     padding:10px 14px; background: rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.06); color:var(--ink); border-radius:12px; font-weight:900; font-size:14px; opacity:0; transition: opacity .25s ease; pointer-events:none }
@@ -115,8 +112,8 @@
   #minNumberValue{ min-width:2.5em; font-weight:1000; color:#31551c }
   .panel .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px }
   .panel button{ padding:9px 14px; border-radius:12px; border:1px solid rgba(79,120,41,.25); background: linear-gradient(180deg, #fff8c9, #91c95b); color:#31551c; font-weight:1000; cursor:pointer; box-shadow:0 4px 10px rgba(45,75,24,.16) }
-  #saveTeacher{ background-image:linear-gradient(rgba(255,255,255,.1), rgba(121,181,75,.15)), url("assets/bewaar.png"); background-size:100% 100%; background-position:center; min-width:96px }
-  #closeTeacher{ background-image:linear-gradient(rgba(255,255,255,.1), rgba(121,181,75,.15)), url("assets/sluit.png"); background-size:100% 100%; background-position:center; min-width:86px }
+  #saveTeacher{ background-image:linear-gradient(rgba(255,255,255,.1), rgba(121,181,75,.15)), url("assets/bewaar.png"); background-size:100% 100%; background-position:center; min-width:96px; color:transparent }
+  #closeTeacher{ background-image:linear-gradient(rgba(255,255,255,.1), rgba(121,181,75,.15)), url("assets/sluit.png"); background-size:100% 100%; background-position:center; min-width:86px; color:transparent }
   #previewBtn{ background: linear-gradient(180deg, #fff8c9, #91c95b) !important; color:#31551c }
 
   .slide-in{ transition: transform .9s cubic-bezier(.2,.9,.2,1) }
@@ -161,7 +158,6 @@
 
     <div id="helper" class="helper" aria-hidden="true">
       <img src="assets/lieveheersbeestje.png" alt="">
-      <span class="helper-text">Luister goed</span>
     </div>
 
     <div id="startOverlay" aria-modal="true" role="dialog">
@@ -195,7 +191,7 @@
         </div>
       </div>
 
-      <div class="actions"><button id="saveTeacher" type="button">Bewaar</button><button id="closeTeacher" type="button">Sluit</button></div>
+      <div class="actions"><button id="saveTeacher" type="button" aria-label="Bewaar"></button><button id="closeTeacher" type="button" aria-label="Sluit"></button></div>
     </div>
 
     <audio id="bgm" src="soft-ambient-textures-with-subtle-bird-chirps-377058.mp3" loop preload="auto"></audio>
@@ -415,6 +411,7 @@
     if(musicBtn){
       musicBtn.setAttribute('aria-pressed', on ? 'true' : 'false')
       musicBtn.title = on ? 'Muziek uit' : 'Muziek aan'
+      musicBtn.classList.toggle('music-off', !on)
     }
     if(musicIcon){
       musicIcon.src = 'assets/muziek.png'
@@ -604,7 +601,17 @@
   }
 
   function enforceStacking(){
-    state.bubbles.forEach((b, idx) => { b.style.zIndex = String(1000 + idx) })
+    let minN = Infinity
+    for(const b of state.bubbles){
+      if(b.classList.contains('pop')) continue
+      const n = parseInt(b.dataset.num, 10)
+      if(Number.isFinite(n) && n < minN) minN = n
+    }
+
+    for(const b of state.bubbles){
+      const n = parseInt(b.dataset.num, 10)
+      b.style.zIndex = n === minN ? '2000' : String(1000 - n)
+    }
   }
 
   function burst(x,y,baseSize){
@@ -657,6 +664,7 @@
     }, {once:true})
 
     el.classList.add('pop')
+    enforceStacking()
     burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
 
     await ensureTTSReady()
