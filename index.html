@@ -83,10 +83,12 @@
   .dot{ position:absolute; width:12px; height:12px; border-radius:9999px; opacity:.95; transform: translate(-50%,-50%) scale(1); animation: dot .55s ease-out forwards }
   @keyframes dot{ to{ transform: translate(var(--dx), var(--dy)) scale(.8); opacity:0 } }
 
-  .helper{ position:absolute; left:18px; bottom:calc(64px + env(safe-area-inset-bottom, 0px)); width:clamp(72px, 13vmin, 128px); min-height:92px;
-    pointer-events:none; opacity:.98; transition: opacity .25s ease; z-index:4; display:flex; align-items:flex-end }
+  .helper{ position:absolute; left:clamp(10px, 2vw, 22px); bottom:calc(58px + env(safe-area-inset-bottom, 0px)); width:clamp(96px, 17vmin, 170px); min-height:92px;
+    pointer-events:none; opacity:.98; transition: opacity .25s ease; z-index:5; display:flex; align-items:flex-end }
   .helper.show{ opacity:.98 }
-  .helper img{ width:clamp(72px, 13vmin, 128px); height:auto; filter:drop-shadow(0 8px 8px rgba(38,59,20,.28)) }
+  .helper img{ width:100%; height:auto; filter:drop-shadow(0 8px 8px rgba(38,59,20,.28)) }
+  .helper.emotion-pop img{ animation: helperPop .28s ease-out }
+  @keyframes helperPop{ 0%{ transform:scale(.94) } 60%{ transform:scale(1.05) } 100%{ transform:scale(1) } }
 
   #toast{ position:absolute; left:50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     padding:10px 14px; background: rgba(0,0,0,.08); border:1px solid rgba(0,0,0,.06); color:var(--ink); border-radius:12px; font-weight:900; font-size:14px; opacity:0; transition: opacity .25s ease; pointer-events:none }
@@ -157,7 +159,7 @@
     </div>
 
     <div id="helper" class="helper" aria-hidden="true">
-      <img src="assets/lieveheersbeestje.png" alt="">
+      <img id="helperImg" src="assets/lieveheersbeestje_06_zwaaiend.png" alt="">
     </div>
 
     <div id="startOverlay" aria-modal="true" role="dialog">
@@ -220,6 +222,35 @@
   const toast = document.getElementById('toast')
   const badge = document.getElementById('badge')
   const helper = document.getElementById('helper')
+  const helperImg = document.getElementById('helperImg')
+
+  const LADYBUG = {
+    happy: 'assets/lieveheersbeestje_01_blij.png',
+    sad: 'assets/lieveheersbeestje_02_verdrietig.png',
+    thinking: 'assets/lieveheersbeestje_03_denkend.png',
+    surprised: 'assets/lieveheersbeestje_04_verbaasd.png',
+    determined: 'assets/lieveheersbeestje_05_boos_vastberaden.png',
+    waving: 'assets/lieveheersbeestje_06_zwaaiend.png',
+    running: 'assets/lieveheersbeestje_07_rennend.png',
+    victory: 'assets/lieveheersbeestje_08_springend_victorie.png'
+  }
+
+  let helperEmotionTimer = 0
+
+  function setLadybugEmotion(emotion, fallbackAfterMs = 0){
+    if(!helper || !helperImg || !LADYBUG[emotion]) return
+    helperImg.src = LADYBUG[emotion]
+    helper.classList.remove('emotion-pop')
+    void helper.offsetWidth
+    helper.classList.add('emotion-pop')
+
+    clearTimeout(helperEmotionTimer)
+    if(fallbackAfterMs > 0){
+      helperEmotionTimer = setTimeout(() => {
+        if(helperImg) helperImg.src = LADYBUG.happy
+      }, fallbackAfterMs)
+    }
+  }
 
   const teacherBtn = document.getElementById('teacherBtn')
   const teacherPanel = document.getElementById('teacherPanel')
@@ -541,11 +572,13 @@
   }
 
   // Helperhand
-  function hideHelper(){ helper.classList.remove('show') }
+  function hideHelper(){ helper.classList.remove('idle-hint') }
   function maybeShowHelper(){
     const now = performance.now()
     if(now - state.lastInteraction < state.idleMs) return
-    helper.classList.add('show')
+    if(helper.classList.contains('idle-hint')) return
+    helper.classList.add('idle-hint')
+    setLadybugEmotion('thinking')
   }
   function registerInteraction(){ state.lastInteraction = performance.now(); hideHelper() }
   document.addEventListener('pointerdown', registerInteraction, {passive:true})
@@ -639,11 +672,16 @@
     if(!correct){
       logError(state.wave, state.requiredNext, n)
       showToast(`Fout, begin opnieuw bij ${state.minNumber}`)
+      setLadybugEmotion('sad', 1500)
       restartCurrentWaveWithoutTeleport()
+      setTimeout(() => setLadybugEmotion('determined', 1600), 900)
       await ensureTTSReady()
       speak(`Oeps, begin opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
       return
     }
+
+    const isLastBubble = state.bubbles.length === 1
+    setLadybugEmotion(isLastBubble ? 'victory' : 'happy', isLastBubble ? 1800 : 900)
 
     const nextAfterTap = state.requiredNext + 1
     state.requiredNext = nextAfterTap
@@ -743,6 +781,10 @@
     state.requiredNext = state.minNumber
     setPastelForWave(state.wave)
     createWaveBubbles()
+    setLadybugEmotion('victory', 1300)
+    setTimeout(() => {
+      setLadybugEmotion(state.moving ? 'running' : 'happy')
+    }, 1300)
     badge.textContent = `Tik de cijfers op volgorde`
     state.lastInteraction = performance.now()
   }
@@ -793,6 +835,7 @@
     setPastelForWave(state.wave); clearBubbles(); createWaveBubbles()
     badge.textContent = `Tik de cijfers op volgorde`
     startOverlay.classList.add('hidden')
+    setLadybugEmotion('happy', 1400)
 
     speak('Start', state.friendlyRate, {interrupt:true})
     speak(`Tik ${word(state.minNumber)}`, state.numberRate, {interrupt:false})
@@ -805,7 +848,7 @@
     state.lastTime = 0
     state.runningRAF = requestAnimationFrame(tick)
   }
-  function reset(){ start() }
+  function reset(){ setLadybugEmotion('waving', 1200); start() }
 
   function openTeacherPanelSecure(){
     const a = 4
@@ -835,6 +878,7 @@
     minNumberValue.textContent = inputMinNumber.value
   })
   vraagBtn.addEventListener('click', async () => {
+    setLadybugEmotion('thinking', 1800)
     await ensureTTSReady()
     const endNumber = currentMaxNumber()
     speak(`Tik de cijfers op volgorde van ${word(state.minNumber)} tot en met ${word(endNumber)}`, state.friendlyRate, {interrupt:true})
