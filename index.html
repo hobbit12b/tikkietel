@@ -96,17 +96,21 @@
     align-items:flex-end;
     justify-content:center;
   }
+  .helper.show{
+    opacity:1;
+  }
   .helper img{
     width:100%;
     height:100%;
     object-fit:contain;
     object-position:center bottom;
-    filter:drop-shadow(0 8px 8px rgba(38,59,20,.28));
-    transform:scale(var(--ladybug-scale, 1));
     transform-origin:center bottom;
+    transform:scale(var(--ladybug-scale, 1));
+    filter:drop-shadow(0 8px 8px rgba(38,59,20,.28));
   }
-  /* Alleen gebruiken bij echte emotiewissel */
-  .helper.emotion-pop img{ animation:helperPop .28s ease-out }
+  .helper.emotion-pop img{
+    animation:helperPop .28s ease-out;
+  }
   @keyframes helperPop{
     0%{ transform:scale(calc(var(--ladybug-scale, 1) * .96)) }
     60%{ transform:scale(calc(var(--ladybug-scale, 1) * 1.04)) }
@@ -182,7 +186,7 @@
     </div>
 
     <div id="helper" class="helper" aria-hidden="true">
-      <img id="helperImg" src="assets/lieveheersbeestje_06_zwaaiend.png" alt="">
+      <img id="helperImg" src="assets/lieveheersbeestje_03_denkend.png" alt="">
     </div>
 
     <div id="startOverlay" aria-modal="true" role="dialog">
@@ -248,32 +252,32 @@
   const helperImg = document.getElementById('helperImg')
 
   const LADYBUG = {
+    neutral: 'assets/lieveheersbeestje_03_denkend.png',
     happy: 'assets/lieveheersbeestje_01_blij.png',
     sad: 'assets/lieveheersbeestje_02_verdrietig.png',
     thinking: 'assets/lieveheersbeestje_03_denkend.png',
     surprised: 'assets/lieveheersbeestje_04_verbaasd.png',
     determined: 'assets/lieveheersbeestje_05_boos_vastberaden.png',
     waving: 'assets/lieveheersbeestje_06_zwaaiend.png',
-    running: 'assets/lieveheersbeestje_07_rennend.png',
     victory: 'assets/lieveheersbeestje_08_springend_victorie.png'
   }
 
   const LADYBUG_SCALE = {
+    neutral: 1.02,
     happy: 1,
     sad: 1.06,
     thinking: 1.02,
     surprised: 1.02,
     determined: 1.04,
     waving: 1,
-    running: 1.03,
     victory: 1
   }
 
-  let currentLadybugEmotion = 'waving'
+  let currentLadybugEmotion = 'neutral'
   let helperEmotionTimer = 0
 
   function setLadybugEmotion(emotion, fallbackAfterMs = 0){
-    if(!helperImg || !LADYBUG[emotion]) return
+    if(!helperImg || !helper || !LADYBUG[emotion]) return
 
     clearTimeout(helperEmotionTimer)
 
@@ -282,7 +286,7 @@
     if(currentLadybugEmotion === emotion){
       if(fallbackAfterMs > 0){
         helperEmotionTimer = setTimeout(() => {
-          setLadybugEmotion('happy')
+          setLadybugEmotion('neutral')
         }, fallbackAfterMs)
       }
       return
@@ -298,9 +302,13 @@
 
     if(fallbackAfterMs > 0){
       helperEmotionTimer = setTimeout(() => {
-        setLadybugEmotion('happy')
+        setLadybugEmotion('neutral')
       }, fallbackAfterMs)
     }
+  }
+
+  function resetLadybugToDefault(){
+    setLadybugEmotion('neutral')
   }
 
   const teacherBtn = document.getElementById('teacherBtn')
@@ -376,7 +384,7 @@
     bubbles:[],
     velocities:[],
     jerkMeta:new Map(),
-    runningRAF:0,
+    animationRAF:0,
     lastTime:0,
     voice:null,
     voicePrimed:false,
@@ -470,6 +478,25 @@
       u.pitch=state.friendlyPitch
       u.volume=state.voiceVolume
       if(state.voice) u.voice=state.voice
+      speechSynthesis.speak(u)
+    }catch(e){}
+  }
+
+  function speakFast(text, rate=state.numberRate, opts={interrupt:true}){
+    try{
+      if(opts.interrupt) speechSynthesis.cancel()
+      speechSynthesis.resume()
+      if(speechSynthesis.paused){
+        speechSynthesis.resume()
+      }
+
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = 'nl-NL'
+      u.rate = rate
+      u.pitch = state.friendlyPitch
+      u.volume = state.voiceVolume
+      if(state.voice) u.voice = state.voice
+
       speechSynthesis.speak(u)
     }catch(e){}
   }
@@ -624,12 +651,11 @@
 
   // Helperhand
   function hideHelper(){
-    // Helper blijft altijd zichtbaar.
+    // Het lieveheersbeestje blijft altijd zichtbaar.
   }
   function maybeShowHelper(){
-    const now = performance.now()
-    if(now - state.lastInteraction < state.idleMs) return
-    setLadybugEmotion('thinking')
+    // Geen zichtbaarheid meer aanpassen.
+    // De helper blijft rustig in standaardpose.
   }
   function registerInteraction(){ state.lastInteraction = performance.now(); hideHelper() }
   document.addEventListener('pointerdown', registerInteraction, {passive:true})
@@ -719,23 +745,21 @@
     if(!state.bubbles.includes(el)) return
     if(el.classList.contains('pop')) return
     const correct = n === state.requiredNext
+    const isLastBubble = state.bubbles.length === 1
 
     if(!correct){
       logError(state.wave, state.requiredNext, n)
       showToast(`Fout, begin opnieuw bij ${state.minNumber}`)
-      setLadybugEmotion('sad', 1400)
+      setLadybugEmotion('sad', 2200)
       restartCurrentWaveWithoutTeleport()
-      setTimeout(() => setLadybugEmotion('determined'), 900)
-      await ensureTTSReady()
-      speak(`Oeps, begin opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
+      speakFast(`Oeps, begin opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
       return
     }
 
-    const isLastBubble = state.bubbles.length === 1
+    speakFast(word(n), state.numberRate, {interrupt:true})
+
     if(isLastBubble){
-      setLadybugEmotion('victory', 1500)
-    }else{
-      setLadybugEmotion('happy')
+      setLadybugEmotion('victory', 2200)
     }
 
     const nextAfterTap = state.requiredNext + 1
@@ -760,8 +784,6 @@
     enforceStacking()
     burst(rect.left + rect.width/2, rect.top + rect.height/2, parseFloat(el.dataset.size))
 
-    await ensureTTSReady()
-    speak(word(n), state.numberRate, {interrupt:true})
   }
 
   function restartCurrentWaveWithoutTeleport(){
@@ -836,9 +858,8 @@
     state.requiredNext = state.minNumber
     setPastelForWave(state.wave)
     createWaveBubbles()
-    setLadybugEmotion('victory', 1200)
     setTimeout(() => {
-      setLadybugEmotion(state.moving ? 'running' : 'happy')
+      setLadybugEmotion('neutral')
     }, 1200)
     badge.textContent = `Tik de cijfers op volgorde`
     state.lastInteraction = performance.now()
@@ -846,7 +867,7 @@
 
   function tick(ts){
     maybeShowHelper()
-    if(!state.moving){ state.lastTime = ts; state.runningRAF = requestAnimationFrame(tick); return }
+    if(!state.moving){ state.lastTime = ts; state.animationRAF = requestAnimationFrame(tick); return }
     if(!state.lastTime) state.lastTime = ts
     const dt = Math.min(0.05, (ts - state.lastTime) / 1000); state.lastTime = ts
     const W = app.clientWidth, H = app.clientHeight
@@ -873,7 +894,7 @@
       setTransform(el, x, y)
     }
     if(Math.floor(performance.now()/1000)%2===0){ enforceStacking() }
-    state.runningRAF = requestAnimationFrame(tick)
+    state.animationRAF = requestAnimationFrame(tick)
   }
 
   async function enterFullscreen(){
@@ -890,7 +911,7 @@
     setPastelForWave(state.wave); clearBubbles(); createWaveBubbles()
     badge.textContent = `Tik de cijfers op volgorde`
     startOverlay.classList.add('hidden')
-    setLadybugEmotion('happy')
+    setLadybugEmotion('neutral')
 
     speak('Start', state.friendlyRate, {interrupt:true})
     speak(`Tik ${word(state.minNumber)}`, state.numberRate, {interrupt:false})
@@ -899,11 +920,11 @@
     updateMusicButtonUI()
 
     state.lastInteraction = performance.now()
-    cancelAnimationFrame(state.runningRAF)
+    cancelAnimationFrame(state.animationRAF)
     state.lastTime = 0
-    state.runningRAF = requestAnimationFrame(tick)
+    state.animationRAF = requestAnimationFrame(tick)
   }
-  function reset(){ setLadybugEmotion('waving'); start() }
+  function reset(){ setLadybugEmotion('neutral'); start() }
 
   function openTeacherPanelSecure(){
     const a = 4
@@ -933,7 +954,7 @@
     minNumberValue.textContent = inputMinNumber.value
   })
   vraagBtn.addEventListener('click', async () => {
-    setLadybugEmotion('thinking', 1800)
+    setLadybugEmotion('thinking', 2000)
     await ensureTTSReady()
     const endNumber = currentMaxNumber()
     speak(`Tik de cijfers op volgorde van ${word(state.minNumber)} tot en met ${word(endNumber)}`, state.friendlyRate, {interrupt:true})
