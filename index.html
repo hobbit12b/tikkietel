@@ -534,6 +534,88 @@
     }catch(e){}
   }
 
+  const NUMBER_AUDIO_BASE = 'audio/'
+  const numberAudioCache = new Map()
+  let currentNumberAudio = null
+
+  function numberAudioFileName(n){
+    if(n === 100) return '100.mp3'
+    return String(n).padStart(2, '0') + '.mp3'
+  }
+
+  function getNumberAudio(n){
+    if(n < 1 || n > 100) return null
+
+    if(numberAudioCache.has(n)){
+      return numberAudioCache.get(n)
+    }
+
+    const audio = new Audio(NUMBER_AUDIO_BASE + numberAudioFileName(n))
+    audio.preload = 'auto'
+    audio.volume = state.voiceVolume
+    numberAudioCache.set(n, audio)
+    return audio
+  }
+
+  function preloadNumberAudio(){
+    for(let n = 1; n <= 100; n++){
+      const audio = getNumberAudio(n)
+      if(audio){
+        try{ audio.load() }catch(e){}
+      }
+    }
+  }
+
+  function playNumberAudio(n){
+    const audio = getNumberAudio(n)
+
+    if(!audio){
+      speakFast(word(n), state.numberRate, {interrupt:true})
+      return
+    }
+
+    try{
+      if(currentNumberAudio && currentNumberAudio !== audio){
+        currentNumberAudio.pause()
+        currentNumberAudio.currentTime = 0
+      }
+
+      currentNumberAudio = audio
+      audio.pause()
+      audio.currentTime = 0
+      audio.volume = state.voiceVolume
+
+      if(typeof duckMusicForSpeech === 'function'){
+        duckMusicForSpeech()
+      }
+
+      audio.onended = () => {
+        if(typeof restoreMusicAfterSpeech === 'function'){
+          restoreMusicAfterSpeech()
+        }
+      }
+
+      audio.onerror = () => {
+        if(typeof restoreMusicAfterSpeech === 'function'){
+          restoreMusicAfterSpeech()
+        }
+        speakFast(word(n), state.numberRate, {interrupt:true})
+      }
+
+      audio.play().catch(() => {
+        if(typeof restoreMusicAfterSpeech === 'function'){
+          restoreMusicAfterSpeech()
+        }
+        speakFast(word(n), state.numberRate, {interrupt:true})
+      })
+    }catch(e){
+      if(typeof restoreMusicAfterSpeech === 'function'){
+        restoreMusicAfterSpeech()
+      }
+      speakFast(word(n), state.numberRate, {interrupt:true})
+    }
+  }
+
 
 
   let bgmPausedByVisibility = false
@@ -548,6 +630,13 @@
 
     try{
       speechSynthesis.cancel()
+    }catch(e){}
+
+    try{
+      if(currentNumberAudio){
+        currentNumberAudio.pause()
+        currentNumberAudio.currentTime = 0
+      }
     }catch(e){}
   }
 
@@ -857,7 +946,7 @@
       return
     }
 
-    speakFast(word(n), state.numberRate, {interrupt:true})
+    playNumberAudio(n)
 
     if(isLastBubble){
       const fallbackDefault = pickDefaultEmotion()
@@ -1012,6 +1101,7 @@
     setPastelForWave(state.wave); clearBubbles(); createWaveBubbles()
     badge.textContent = `Tik de cijfers op volgorde`
     startOverlay.classList.add('hidden')
+    preloadNumberAudio()
     setLadybugDefault()
 
     speak('Start', state.friendlyRate, {interrupt:true})
