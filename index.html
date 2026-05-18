@@ -435,7 +435,8 @@
     numberRate:0.98,
     friendlyPitch:1.15,
     musicEnabled:true,
-    musicVolume:0.18
+    musicVolume:0.18,
+    gameStarted:false
   }
 
   function clampNum(v,a,b){ return Math.max(a, Math.min(b, v)) }
@@ -515,13 +516,12 @@
     }catch(e){}
   }
 
+  // iPad/Safari kan speechSynthesis niet altijd stabiel routen naar extern audio/scherm; dit versnelt en stabiliseert lokaal gedrag, maar garandeert die routing niet.
   function speakFast(text, rate=state.numberRate, opts={interrupt:true}){
     try{
       if(opts.interrupt) speechSynthesis.cancel()
+      if(speechSynthesis.paused) speechSynthesis.resume()
       speechSynthesis.resume()
-      if(speechSynthesis.paused){
-        speechSynthesis.resume()
-      }
 
       const u = new SpeechSynthesisUtterance(text)
       u.lang = 'nl-NL'
@@ -534,6 +534,36 @@
     }catch(e){}
   }
 
+
+
+  let bgmPausedByVisibility = false
+
+  function pauseAllAudioForHiddenState(){
+    try{
+      if(!bgm.paused){
+        bgmPausedByVisibility = true
+        bgm.pause()
+      }
+    }catch(e){}
+
+    try{
+      speechSynthesis.cancel()
+    }catch(e){}
+  }
+
+  async function resumeMusicAfterHiddenState(){
+    if(!state.gameStarted) return
+    if(!state.musicEnabled) return
+    if(document.visibilityState && document.visibilityState !== 'visible') return
+
+    try{
+      if(bgmPausedByVisibility || bgm.paused){
+        await bgm.play()
+      }
+    }catch(e){}
+    bgmPausedByVisibility = false
+    updateMusicButtonUI()
+  }
   // Muziek
   function applyMusicSettings(){
     bgm.volume = clampNum(state.musicVolume, 0, 1)
@@ -542,10 +572,11 @@
   async function startMusicIfEnabled(){
     try{
       applyMusicSettings()
-      if(state.musicEnabled && bgm.paused){
+      if(state.musicEnabled && bgm.paused && (!document.visibilityState || document.visibilityState === 'visible')){
         await bgm.play()
       }
     }catch(e){}
+    bgmPausedByVisibility = false
     updateMusicButtonUI()
   }
   function updateMusicButtonUI(){
@@ -564,8 +595,13 @@
     state.musicEnabled = !state.musicEnabled
     applyMusicSettings()
     try{
-      if(state.musicEnabled){ await bgm.play() } else { bgm.pause() }
+      if(state.musicEnabled){
+        if(!document.visibilityState || document.visibilityState === 'visible') await bgm.play()
+      }else{
+        bgm.pause()
+      }
     }catch(e){}
+    if(!state.musicEnabled) bgmPausedByVisibility = false
     writeJSON(SETTINGS_KEY, {
       maxWave: state.maxWave,
       minNumber: state.minNumber,
@@ -969,6 +1005,7 @@
     await ensureTTSReady()
 
     state.wave = 1; state.requiredNext = state.minNumber; state.moving = false
+    state.gameStarted = true
     setPastelForWave(state.wave); clearBubbles(); createWaveBubbles()
     badge.textContent = `Tik de cijfers op volgorde`
     startOverlay.classList.add('hidden')
@@ -1034,6 +1071,27 @@
   logOverlay.addEventListener('click', e => { if(e.target === logOverlay) closeLogOverlay() })
 
   if (musicBtn) musicBtn.addEventListener('click', toggleMusic)
+
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState !== 'visible'){
+      pauseAllAudioForHiddenState()
+    }else{
+      resumeMusicAfterHiddenState()
+    }
+  })
+
+  window.addEventListener('pagehide', pauseAllAudioForHiddenState)
+  window.addEventListener('blur', () => {
+    if(document.visibilityState !== 'visible'){
+      pauseAllAudioForHiddenState()
+    }
+  })
+
+  window.addEventListener('focus', () => {
+    if(document.visibilityState === 'visible'){
+      resumeMusicAfterHiddenState()
+    }
+  })
 
   const oncePrime = async () => { await ensureTTSReady(); document.removeEventListener('pointerdown', oncePrime) }
   document.addEventListener('pointerdown', oncePrime, {passive:true})
