@@ -718,7 +718,10 @@
   function renderLogIntoOverlay(){
     const arr = readJSON(LOG_KEY, [])
     if(!arr.length){ logList.textContent = 'Geen fouten geregistreerd'; return }
-    logList.textContent = arr.map(e => [
+
+    const newestFirst = arr.slice().reverse()
+
+    logList.textContent = newestFirst.map(e => [
       `datum: ${e.datum}`,
       `tijd: ${e.tijd}`,
       `ik zat in level: ${e.level}`,
