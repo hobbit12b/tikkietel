@@ -704,7 +704,7 @@
     const jaar = d.getFullYear()
     const uur = pad2(d.getHours())
     const min = pad2(d.getMinutes())
-    return { datum: `${dag},${maand},${jaar}`, tijd: `${uur}:${min}` }
+    return { datum: `${dag}-${maand}-${jaar}`, tijd: `${uur}:${min}` }
   }
 
   // Log
