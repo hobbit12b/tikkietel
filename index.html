@@ -125,9 +125,9 @@
   .chip{ border:1px solid rgba(89,125,43,.35); background: linear-gradient(180deg, rgba(248,255,229,.95), rgba(177,218,112,.92));
     color:#31551c; box-shadow:0 5px 12px rgba(42,68,24,.18); padding:8px 12px; border-radius:9999px; font-weight:900; cursor:pointer }
 
-  .panel{ position:absolute; left:12px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); width: min(92vw, 440px); color:#2c4f19;
+  .panel{ position:absolute; left:12px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); width:min(96vw, 620px); max-height:84vh; overflow:auto; color:#2c4f19;
     background-color:rgba(250,255,229,.96); background-image:linear-gradient(rgba(255,255,255,.78), rgba(247,255,218,.88)), url("assets/instellingen.png");
-    background-size:cover; background-position:center; border:2px solid rgba(112,153,58,.38); border-radius:22px; box-shadow: 0 12px 30px rgba(34,64,22,.22); padding:14px; display:none; z-index:4000 }
+    background-size:cover; background-position:center; border:2px solid rgba(112,153,58,.38); border-radius:22px; box-shadow: 0 12px 30px rgba(34,64,22,.22); padding:18px; display:none; z-index:4000 }
   .panel.show{ display:block }
   .panel h3{ margin:6px 6px 10px; font-size:18px; text-shadow:0 1px 0 rgba(255,255,255,.8) }
   .row{ display:flex; align-items:center; gap:10px; margin:10px 6px }
@@ -139,10 +139,11 @@
   .row input[type="range"]::-moz-range-thumb{ width:30px; height:30px; border:0; background:url("assets/sliderschuif.png") center/contain no-repeat; filter:drop-shadow(0 2px 2px rgba(45,75,24,.28)) }
   .row input[type="number"]{ width:110px; padding:7px 9px; border-radius:12px; border:1px solid rgba(84,122,45,.32); background:rgba(255,255,255,.88); color:#2c4f19; font-weight:800 }
   #minNumberValue{ min-width:2.5em; font-weight:1000; color:#31551c }
-  .panel .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px }
-  .panel button{ padding:9px 14px; border-radius:12px; border:1px solid rgba(79,120,41,.25); background: linear-gradient(180deg, #fff8c9, #91c95b); color:#31551c; font-weight:1000; cursor:pointer; box-shadow:0 4px 10px rgba(45,75,24,.16) }
-  #saveTeacher{ background-image:linear-gradient(rgba(255,255,255,.1), rgba(121,181,75,.15)), url("assets/bewaar.png"); background-size:100% 100%; background-position:center; min-width:96px; color:transparent }
-  #closeTeacher{ background-image:linear-gradient(rgba(255,255,255,.1), rgba(121,181,75,.15)), url("assets/sluit.png"); background-size:100% 100%; background-position:center; min-width:86px; color:transparent }
+  .panel .actions{ display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:center; margin-top:16px }
+  .panel .actions-right{ display:flex; gap:12px; flex-wrap:wrap }
+  .panel button{ padding:10px 16px; border-radius:12px; border:1px solid rgba(79,120,41,.25); background: linear-gradient(180deg, #fff8c9, #91c95b); color:#31551c; font-weight:1000; cursor:pointer; box-shadow:0 4px 10px rgba(45,75,24,.16) }
+  #saveTeacher{ min-width:120px; min-height:40px; background-image:linear-gradient(rgba(255,255,255,.1), rgba(121,181,75,.15)), url("assets/bewaar.png"); background-size:100% 100%; background-position:center; color:transparent }
+  #closeTeacher{ min-width:110px; min-height:40px; background-image:linear-gradient(rgba(255,255,255,.1), rgba(121,181,75,.15)), url("assets/sluit.png"); background-size:100% 100%; background-position:center; color:transparent }
   #previewBtn{ background: linear-gradient(180deg, #fff8c9, #91c95b) !important; color:#31551c }
 
   .slide-in{ transition: transform .9s cubic-bezier(.2,.9,.2,1) }
@@ -220,7 +221,13 @@
         </div>
       </div>
 
-      <div class="actions"><button id="saveTeacher" type="button" aria-label="Bewaar"></button><button id="closeTeacher" type="button" aria-label="Sluit"></button></div>
+      <div class="actions">
+        <button id="resetTeacher" type="button">Reset</button>
+        <div class="actions-right">
+          <button id="saveTeacher" type="button" aria-label="Bewaar"></button>
+          <button id="closeTeacher" type="button" aria-label="Sluit"></button>
+        </div>
+      </div>
     </div>
 
     <audio id="bgm" src="soft-ambient-textures-with-subtle-bird-chirps-377058.mp3" loop preload="auto"></audio>
@@ -255,7 +262,6 @@
     neutral: 'assets/lieveheersbeestje_03_denkend.png',
     happy: 'assets/lieveheersbeestje_01_blij.png',
     sad: 'assets/lieveheersbeestje_02_verdrietig.png',
-    thinking: 'assets/lieveheersbeestje_03_denkend.png',
     surprised: 'assets/lieveheersbeestje_04_verbaasd.png',
     determined: 'assets/lieveheersbeestje_05_boos_vastberaden.png',
     waving: 'assets/lieveheersbeestje_06_zwaaiend.png',
@@ -266,7 +272,6 @@
     neutral: 1.02,
     happy: 1,
     sad: 1.06,
-    thinking: 1.02,
     surprised: 1.02,
     determined: 1.04,
     waving: 1,
@@ -274,19 +279,35 @@
   }
 
   let currentLadybugEmotion = 'neutral'
+  let currentDefaultEmotion = 'neutral'
   let helperEmotionTimer = 0
 
-  function setLadybugEmotion(emotion, fallbackAfterMs = 0){
+  function pickRandomFrom(list, avoid = null){
+    const filtered = avoid ? list.filter(item => item !== avoid) : list.slice()
+    const pool = filtered.length ? filtered : list
+    return pool[Math.floor(Math.random() * pool.length)]
+  }
+  function pickDefaultEmotion(){
+    const next = pickRandomFrom(['neutral', 'happy'], currentDefaultEmotion)
+    currentDefaultEmotion = next
+    return next
+  }
+  function pickErrorEmotion(){
+    return pickRandomFrom(['sad', 'surprised', 'determined'], currentLadybugEmotion)
+  }
+  function pickSuccessEmotion(){
+    return pickRandomFrom(['victory', 'waving'], currentLadybugEmotion)
+  }
+
+  function setLadybugEmotion(emotion, fallbackAfterMs = 0, fallbackEmotion = null){
     if(!helperImg || !helper || !LADYBUG[emotion]) return
 
     clearTimeout(helperEmotionTimer)
 
-    // Cruciaal:
-    // Als dezelfde emotie al zichtbaar is, niets opnieuw laden en geen animatie starten.
     if(currentLadybugEmotion === emotion){
-      if(fallbackAfterMs > 0){
+      if(fallbackAfterMs > 0 && fallbackEmotion){
         helperEmotionTimer = setTimeout(() => {
-          setLadybugEmotion('neutral')
+          setLadybugEmotion(fallbackEmotion)
         }, fallbackAfterMs)
       }
       return
@@ -300,15 +321,15 @@
     void helper.offsetWidth
     helper.classList.add('emotion-pop')
 
-    if(fallbackAfterMs > 0){
+    if(fallbackAfterMs > 0 && fallbackEmotion){
       helperEmotionTimer = setTimeout(() => {
-        setLadybugEmotion('neutral')
+        setLadybugEmotion(fallbackEmotion)
       }, fallbackAfterMs)
     }
   }
 
-  function resetLadybugToDefault(){
-    setLadybugEmotion('neutral')
+  function setLadybugDefault(){
+    setLadybugEmotion(pickDefaultEmotion())
   }
 
   const teacherBtn = document.getElementById('teacherBtn')
@@ -325,11 +346,13 @@
   const inputMusicVol = document.getElementById('musicVol')
   const previewBtn = document.getElementById('previewBtn')
   const logBtn = document.getElementById('logBtn')
+  const resetTeacher = document.getElementById('resetTeacher')
 
   const logOverlay = document.getElementById('logOverlay')
   const logList = document.getElementById('logList')
   const closeLogBtn = document.getElementById('closeLogBtn')
   const clearLogBtn = document.getElementById('clearLogBtn')
+  let logOverlayMode = 'public'
 
   const bgm = document.getElementById('bgm')
 
@@ -353,6 +376,16 @@
 
   const SETTINGS_KEY = 'kleuter_cijferpop_settings'
   const LOG_KEY = 'kleuter_cijferpop_log'
+  const DEFAULT_SETTINGS = {
+    maxWave: 100,
+    minNumber: 1,
+    interLevelDelay: 1.8,
+    minSpeed: 10,
+    maxSpeed: 22,
+    voiceVolume: 1.0,
+    musicVolume: 0.18,
+    musicEnabled: true
+  }
 
   const safeStore = (() => {
     let memory = {}
@@ -574,6 +607,31 @@
     inputMusicVol.value = state.musicVolume
     updateMusicButtonUI()
   }
+  function applySettingsToInputs(settings){
+    inputMaxWave.value = settings.maxWave
+    inputMinNumber.max = settings.maxWave
+    inputMinNumber.value = settings.minNumber
+    minNumberValue.textContent = settings.minNumber
+    inputDelay.value = settings.interLevelDelay
+    inputMinSpeed.value = settings.minSpeed
+    inputMaxSpeed.value = settings.maxSpeed
+    inputVol.value = settings.voiceVolume
+    inputMusicVol.value = settings.musicVolume
+  }
+  function resetSettingsToDefault(){
+    state.maxWave = DEFAULT_SETTINGS.maxWave
+    state.minNumber = DEFAULT_SETTINGS.minNumber
+    state.interLevelDelay = DEFAULT_SETTINGS.interLevelDelay
+    state.minSpeed = DEFAULT_SETTINGS.minSpeed
+    state.maxSpeed = DEFAULT_SETTINGS.maxSpeed
+    state.voiceVolume = DEFAULT_SETTINGS.voiceVolume
+    state.musicVolume = DEFAULT_SETTINGS.musicVolume
+    state.musicEnabled = DEFAULT_SETTINGS.musicEnabled
+    applySettingsToInputs(DEFAULT_SETTINGS)
+    applyMusicSettings()
+    writeJSON(SETTINGS_KEY, DEFAULT_SETTINGS)
+    showToast('Instellingen hersteld')
+  }
   function saveSettings(){
     state.maxWave = clampInt(parseInt(inputMaxWave.value,10), 3, 100)
     state.minNumber = clampInt(parseInt(inputMinNumber.value,10), 1, state.maxWave)
@@ -634,8 +692,12 @@
   }
 
   // Overlay helpers, micro delay voor Windows
-  function openLogOverlay(){
+  function openLogOverlay(mode = 'public'){
+    logOverlayMode = mode
     renderLogIntoOverlay()
+    if(clearLogBtn){
+      clearLogBtn.style.display = mode === 'teacher' ? 'inline-block' : 'none'
+    }
     requestAnimationFrame(() => {
       logOverlay.style.display = 'flex'
       logOverlay.classList.add('show')
@@ -651,11 +713,10 @@
 
   // Helperhand
   function hideHelper(){
-    // Het lieveheersbeestje blijft altijd zichtbaar.
+    // Helper blijft altijd zichtbaar
   }
   function maybeShowHelper(){
-    // Geen zichtbaarheid meer aanpassen.
-    // De helper blijft rustig in standaardpose.
+    // Geen zichtbaarheid aanpassen
   }
   function registerInteraction(){ state.lastInteraction = performance.now(); hideHelper() }
   document.addEventListener('pointerdown', registerInteraction, {passive:true})
@@ -750,7 +811,8 @@
     if(!correct){
       logError(state.wave, state.requiredNext, n)
       showToast(`Fout, begin opnieuw bij ${state.minNumber}`)
-      setLadybugEmotion('sad', 2200)
+      const fallbackDefault = pickDefaultEmotion()
+      setLadybugEmotion(pickErrorEmotion(), 2200, fallbackDefault)
       restartCurrentWaveWithoutTeleport()
       speakFast(`Oeps, begin opnieuw bij ${word(state.minNumber)}`, state.friendlyRate, {interrupt:true})
       return
@@ -759,7 +821,8 @@
     speakFast(word(n), state.numberRate, {interrupt:true})
 
     if(isLastBubble){
-      setLadybugEmotion('victory', 2200)
+      const fallbackDefault = pickDefaultEmotion()
+      setLadybugEmotion(pickSuccessEmotion(), 2200, fallbackDefault)
     }
 
     const nextAfterTap = state.requiredNext + 1
@@ -858,9 +921,7 @@
     state.requiredNext = state.minNumber
     setPastelForWave(state.wave)
     createWaveBubbles()
-    setTimeout(() => {
-      setLadybugEmotion('neutral')
-    }, 1200)
+    setLadybugDefault()
     badge.textContent = `Tik de cijfers op volgorde`
     state.lastInteraction = performance.now()
   }
@@ -911,7 +972,7 @@
     setPastelForWave(state.wave); clearBubbles(); createWaveBubbles()
     badge.textContent = `Tik de cijfers op volgorde`
     startOverlay.classList.add('hidden')
-    setLadybugEmotion('neutral')
+    setLadybugDefault()
 
     speak('Start', state.friendlyRate, {interrupt:true})
     speak(`Tik ${word(state.minNumber)}`, state.numberRate, {interrupt:false})
@@ -954,7 +1015,7 @@
     minNumberValue.textContent = inputMinNumber.value
   })
   vraagBtn.addEventListener('click', async () => {
-    setLadybugEmotion('thinking', 2000)
+    setLadybugDefault()
     await ensureTTSReady()
     const endNumber = currentMaxNumber()
     speak(`Tik de cijfers op volgorde van ${word(state.minNumber)} tot en met ${word(endNumber)}`, state.friendlyRate, {interrupt:true})
@@ -964,10 +1025,11 @@
   closeTeacher.addEventListener('click', () => teacherPanel.classList.remove('show'))
   saveTeacher.addEventListener('click', () => { saveSettings(); teacherPanel.classList.remove('show') })
 
-  if (previewBtn) previewBtn.addEventListener('click', openLogOverlay)
-  if (logBtn) logBtn.addEventListener('click', openLogOverlay)
+  if (previewBtn) previewBtn.addEventListener('click', () => openLogOverlay('teacher'))
+  if (logBtn) logBtn.addEventListener('click', () => openLogOverlay('public'))
   if (closeLogBtn) closeLogBtn.addEventListener('click', closeLogOverlay)
   if (clearLogBtn) clearLogBtn.addEventListener('click', () => { writeJSON(LOG_KEY, []); renderLogIntoOverlay() })
+  if (resetTeacher) resetTeacher.addEventListener('click', resetSettingsToDefault)
 
   logOverlay.addEventListener('click', e => { if(e.target === logOverlay) closeLogOverlay() })
 
